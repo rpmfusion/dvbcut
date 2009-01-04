@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Encoding=UTF-8
+Name=dvbcut
+GenericName=DVB mpeg Transport Stream utility
+Comment=DVB Cut edits, trims mpeg transport streams into multiple export formats.
+Categories=AudioVideo;Player;
+Exec=dvbcut
+Icon=dvbcut
+Terminal=false
+Type=Application
+
