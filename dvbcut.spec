@@ -3,7 +3,7 @@
 
 Name:    dvbcut
 Version: 0.5.4
-Release: 6.%{svndate}svn138%{?dist}
+Release: 7.%{svndate}svn138%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -24,7 +24,7 @@ Source5: %{name}-snapshot.sh
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
-BuildRequires: qt3-devel
+BuildRequires: qt-devel
 BuildRequires: libao-devel 
 BuildRequires: a52dec-devel 
 BuildRequires: libmad-devel
@@ -113,6 +113,9 @@ fi
 
 
 %changelog
+* Mon Jan  5 2009 David Timms <iinet.net.au at dtimms> - 0.5.4-7.20090101svn138
+- mod BR qt3 to qt for EL-5 branch
+
 * Thu Jan  1 2009 David Timms <iinet.net.au at dtimms> - 0.5.4-6.20090101svn138
 - add required alphatag to post release package name
 - mod License to be GPLv2+ and LGPLv2
