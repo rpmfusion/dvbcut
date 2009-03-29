@@ -3,7 +3,7 @@
 
 Name:    dvbcut
 Version: 0.5.4
-Release: 6.%{svndate}svn138%{?dist}
+Release: 7.%{svndate}svn138%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -113,6 +113,9 @@ fi
 
 
 %changelog
+* Sun Mar 29 2009 Thorsten Leemhuis <fedora [AT] leemhuis [DOT] info> - 0.5.4-7.20090101svn138
+- rebuild for new F11 features
+
 * Thu Jan  1 2009 David Timms <iinet.net.au at dtimms> - 0.5.4-6.20090101svn138
 - add required alphatag to post release package name
 - mod License to be GPLv2+ and LGPLv2
