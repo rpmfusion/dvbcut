@@ -2,7 +2,7 @@
 
 Name:    dvbcut
 Version: 0.6.0
-Release: 1.svn%{svnrev}%{?dist}
+Release: 2.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
