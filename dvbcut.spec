@@ -1,18 +1,17 @@
-# svn revision 138
-%define svndate 20090101
+%define svnrev 157
 
 Name:    dvbcut
-Version: 0.5.4
-Release: 7.%{svndate}svn138%{?dist}
+Version: 0.6.0
+Release: 3.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
 License: GPLv2+ and LGPLv2
 URL:     http://dvbcut.sourceforge.net/
-# No release has been made since 2007-mid, so using svn checkout for latest fixes:
+#  fixes were committed to svn since release, so using svn checkout for latest fixes:
 #Source0: http://downloads.sourceforge.net/dvbcut/dvbcut_%{version}.tar.bz2
 #     use sh dvbcut-snapshot.sh to create the archive
-Source0: %{name}-%{svndate}.tar.bz2
+Source0: %{name}-svn%{svnrev}.tar.bz2
 # Since no icons have been developed by the project, created icons using the
 #     weblogo on the home page. Scaled and text pixel edited using gimp.
 Source1: %{name}.logo.16x16.png
@@ -21,10 +20,11 @@ Source3: %{name}.logo.48x48.png
 # This desktop file was created by hand.
 Source4: %{name}.desktop
 Source5: %{name}-snapshot.sh
+Patch0:  %{name}-0.6.0.gcc44-add-include.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
-BuildRequires: qt-devel
+BuildRequires: qt3-devel
 BuildRequires: libao-devel 
 BuildRequires: a52dec-devel 
 BuildRequires: libmad-devel
@@ -45,13 +45,19 @@ dvbcut can use mplayer if available.
 
 
 %prep
-%setup -q -n %{name}-%{svndate}
+%setup -q -n %{name}-svn%{svnrev}
+%patch0 -b .gcc44-add-include
+
 
 # Fix QTDIR libs in configure
 sed -i 's,-L$QTDIR/$mr_libdirname,-L$QTDIR/lib,' configure.in
 
 # Avoid stripping binaries
 sed -i 's,$(STRIP) $(topdir)/bin/dvbcut$(EXEEXT),,' src/Makefile.in
+
+# don't try to make Debian and ffmpeg files that have been stripped
+sed -i '/debian/d' DISTFILES
+sed -i '/ffmpeg.src/d' DISTFILES
 
 
 %build
@@ -113,8 +119,18 @@ fi
 
 
 %changelog
-* Mon Jan  5 2009 David Timms <iinet.net.au at dtimms> - 0.5.4-7.20090101svn138
-- mod BR qt3 to qt for EL-5 branch
+* Sun Mar 29 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-3.svn157
+- add gcc4 patch for rawhide
+
+* Sun Mar 29 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-2.svn157
+- update to latest post release svn checkout for minor fixes
+- improve dvbcut-snapshot script to not use the checkout date
+- del the debian packaging files from the snapshot archive
+- mod spec to use svnver rather svndate, to make it easier to confirm sources
+- del lines from DISTFILES that reference removed files
+
+* Sat Feb  7 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-1.20090207svn156
+- update to 0.6.0 release, still using post release svn checkout
 
 * Thu Jan  1 2009 David Timms <iinet.net.au at dtimms> - 0.5.4-6.20090101svn138
 - add required alphatag to post release package name
