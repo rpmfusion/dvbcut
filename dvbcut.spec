@@ -2,7 +2,7 @@
 
 Name:    dvbcut
 Version: 0.6.0
-Release: 2.svn%{svnrev}%{?dist}
+Release: 3.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -20,6 +20,7 @@ Source3: %{name}.logo.48x48.png
 # This desktop file was created by hand.
 Source4: %{name}.desktop
 Source5: %{name}-snapshot.sh
+Patch0:  %{name}-0.6.0.gcc44-add-include.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
@@ -45,6 +46,8 @@ dvbcut can use mplayer if available.
 
 %prep
 %setup -q -n %{name}-svn%{svnrev}
+%patch0 -b .gcc44-add-include
+
 
 # Fix QTDIR libs in configure
 sed -i 's,-L$QTDIR/$mr_libdirname,-L$QTDIR/lib,' configure.in
@@ -116,6 +119,9 @@ fi
 
 
 %changelog
+* Sun Mar 29 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-3.svn157
+- add gcc4 patch for rawhide
+
 * Sun Mar 29 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-2.svn157
 - update to latest post release svn checkout for minor fixes
 - improve dvbcut-snapshot script to not use the checkout date
