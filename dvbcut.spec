@@ -2,7 +2,7 @@
 
 Name:    dvbcut
 Version: 0.6.0
-Release: 3.svn%{svnrev}%{?dist}
+Release: 4.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -24,7 +24,8 @@ Patch0:  %{name}-0.6.0.gcc44-add-include.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
-BuildRequires: qt3-devel
+BuildRequires: qt-devel >= 3
+BuildRequires: qt-devel < 4
 BuildRequires: libao-devel 
 BuildRequires: a52dec-devel 
 BuildRequires: libmad-devel
@@ -119,6 +120,9 @@ fi
 
 
 %changelog
+* Sun Mar 29 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-4.svn157
+- adjust BR for qt3 to work on both fedora and epel
+
 * Sun Mar 29 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-3.svn157
 - add gcc4 patch for rawhide
 
