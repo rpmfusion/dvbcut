@@ -1,8 +1,13 @@
 %define svnrev 157
+%if 0%{?fedora} > 6
+  %define qt3 qt3
+%else
+  %define qt3 qt
+%endif
 
 Name:    dvbcut
 Version: 0.6.0
-Release: 5.svn%{svnrev}%{?dist}
+Release: 7.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -24,7 +29,7 @@ Patch0:  %{name}-0.6.0.gcc44-add-include.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
-BuildRequires: qt-devel >= 3 qt-devel < 1:4
+BuildRequires: %{qt3}-devel
 BuildRequires: libao-devel 
 BuildRequires: a52dec-devel 
 BuildRequires: libmad-devel
@@ -50,7 +55,8 @@ dvbcut can use mplayer if available.
 
 
 # Fix QTDIR libs in configure
-sed -i 's,-L$QTDIR/$mr_libdirname,-L$QTDIR/lib,' configure.in
+sed -i 's,$QTDIR/$mr_libdirname,$QTDIR/lib,' configure.in
+
 
 # Avoid stripping binaries
 sed -i 's,$(STRIP) $(topdir)/bin/dvbcut$(EXEEXT),,' src/Makefile.in
@@ -119,6 +125,12 @@ fi
 
 
 %changelog
+* Mon Apr  6 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-7.svn157
+- mod QTDIR configure.in patch to match newer configure.in revision
+
+* Sat Apr  4 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-6.svn157
+- use distro conditional to determine name of BR qt3-devel
+
 * Fri Apr  3 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-5.svn157
 - use another BR qt3 variant to work on both fedora and epel
 
