@@ -7,7 +7,7 @@
 
 Name:    dvbcut
 Version: 0.6.0
-Release: 7.svn%{svnrev}%{?dist}
+Release: 8.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -125,6 +125,9 @@ fi
 
 
 %changelog
+* Wed Oct 21 2009 Thorsten Leemhuis <fedora [AT] leemhuis [DOT] info> - 0.6.0-8.svn157
+- rebuilt
+
 * Mon Apr  6 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-7.svn157
 - mod QTDIR configure.in patch to match newer configure.in revision
 
