@@ -76,7 +76,7 @@ autoconf
 %configure --with-ffmpeg=%{_prefix} \
     --with-ffmpeg-include=%{_includedir}/ffmpeg/
 # It does not compile with smp_mflags
-make %{?_smp_mflags}
+make
 
 
 %install
@@ -148,7 +148,6 @@ update-desktop-database &> /dev/null || :
 - add kde service menu for mpg files for dolphin
 - add help menu to package
 - fix help file being placed in /usr/share/help
-- allow smp compile
 
 * Fri Oct 23 2009 Orcan Ogetbil <oged[DOT]fedora[AT]gmail[DOT]com> - 0.6.0-9.svn157
 - Update desktop file according to F-12 FedoraStudio feature
