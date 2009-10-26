@@ -9,4 +9,6 @@ Exec=dvbcut
 Icon=dvbcut
 Terminal=false
 Type=Application
+MimeType=video/mpeg;
+#nautilus /usr/share/applications, and refresh F5 to see changes to this file.
 

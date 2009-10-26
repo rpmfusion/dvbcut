@@ -1,4 +1,4 @@
-%define svnrev 157
+%define svnrev 166
 %if 0%{?fedora} > 6
   %define qt3 qt3
 %else
@@ -7,7 +7,7 @@
 
 Name:    dvbcut
 Version: 0.6.0
-Release: 9.svn%{svnrev}%{?dist}
+Release: 10.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -25,7 +25,9 @@ Source3: %{name}.logo.48x48.png
 # This desktop file was created by hand.
 Source4: %{name}.desktop
 Source5: %{name}-snapshot.sh
-Patch0:  %{name}-0.6.0.gcc44-add-include.patch
+Source6: %{name}-servicemenu.desktop
+# helpfile is placed in /usr/share/help. Look for it under /usr/share/dvbcut
+Patch0:  %{name}-fix-help-path.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
@@ -35,9 +37,11 @@ BuildRequires: a52dec-devel
 BuildRequires: libmad-devel
 BuildRequires: ffmpeg-devel
 BuildRequires: desktop-file-utils
+BuildRequires: kde-filesystem
 Requires: hicolor-icon-theme
 # mplayer not actually required, but much better with it.
 Requires: mplayer
+Requires: kde-filesystem  
 
 %description
 dvbcut is a Qt application that allows you to select certain parts of an MPEG
@@ -51,7 +55,7 @@ dvbcut can use mplayer if available.
 
 %prep
 %setup -q -n %{name}-svn%{svnrev}
-%patch0 -b .gcc44-add-include
+%patch0 -b .fix-help-path
 
 
 # Fix QTDIR libs in configure
@@ -72,13 +76,14 @@ autoconf
 %configure --with-ffmpeg=%{_prefix} \
     --with-ffmpeg-include=%{_includedir}/ffmpeg/
 # It does not compile with smp_mflags
-make
+make %{?_smp_mflags}
 
 
 %install
 rm -rf %{buildroot}
 make install \
     bindir=%{buildroot}%{_bindir} \
+    helpdir=%{buildroot}%{_datadir}/%{name} \
     mandir=%{buildroot}%{_mandir}
 
 # manual install of icons
@@ -96,6 +101,11 @@ mkdir -p %{buildroot}%{_datadir}/applications
 desktop-file-install --vendor="" \
     --dir %{buildroot}%{_datadir}/applications %{SOURCE4}
 
+#in future: %{_kde4_servicesdir}, but for now
+mkdir -p %{buildroot}%{_kde4_datadir}/kde4/services/ 
+desktop-file-install                                 \
+    --dir=%{buildroot}%{_kde4_datadir}/kde4/services \
+    %{SOURCE6}
 
 %clean
 rm -rf %{buildroot}
@@ -107,12 +117,16 @@ if [ -x %{_bindir}/gtk-update-icon-cache ]; then
   %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
 fi
 
+update-desktop-database &> /dev/null || :
+
 
 %postun
 touch --no-create %{_datadir}/icons/hicolor || :
 if [ -x %{_bindir}/gtk-update-icon-cache ]; then
   %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
 fi
+
+update-desktop-database &> /dev/null || :
 
 
 %files
@@ -122,9 +136,20 @@ fi
 %{_mandir}/man1/%{name}.1.gz
 %{_datadir}/applications/*.desktop
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
+%{_datadir}/%{name}/dvbcut_*.html
+%{_kde4_datadir}/kde4/services/*.desktop
 
 
 %changelog
+* Mon Oct 26 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-10.svn166 
+- update to svn166
+- drop upstreamed gcc44 patch
+- add mpg mimetype to gnome desktop to provide mpeg open with in nautilus
+- add kde service menu for mpg files for dolphin
+- add help menu to package
+- fix help file being placed in /usr/share/help
+- allow smp compile
+
 * Fri Oct 23 2009 Orcan Ogetbil <oged[DOT]fedora[AT]gmail[DOT]com> - 0.6.0-9.svn157
 - Update desktop file according to F-12 FedoraStudio feature
 
@@ -243,4 +268,3 @@ fi
 
 * Thu Nov 08 2007 David Timms <iinet.net.au at dtimms> - 0.5.4-0.1
 - initial package for fedora (based on Herbert Graeber packman effort)
-
