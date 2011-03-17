@@ -1,0 +1,11 @@
+--- src/Makefile.in.orig	2011-03-17 23:18:19.246863276 +1100
++++ src/Makefile.in	2011-03-17 23:20:45.059061716 +1100
+@@ -28,7 +28,7 @@
+ datadir = @datadir@
+ mandir = @mandir@
+ man1dir = $(mandir)/man1
+-helpdir = $(prefix)/share/help
++helpdir = $(datadir)/dvbcut
+ 
+ installdirs = $(DESTDIR)$(bindir) $(DESTDIR)$(helpdir)
+ 
