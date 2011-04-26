@@ -1,7 +1,7 @@
---- makefile.in.orig	2011-03-16 23:04:06.364941975 +1100
-+++ makefile.in	2011-03-16 23:08:32.197955984 +1100
-@@ -29,9 +29,9 @@
- pkgdatadir = $(datadir)/dvbcut
+--- makefile.in.orig	2011-04-25 11:27:29.000000000 +1000
++++ makefile.in	2011-04-26 09:56:06.506983163 +1000
+@@ -30,9 +30,9 @@
+ pkgdatadir = $(datarootdir)/dvbcut
  
  installdirs = $(DESTDIR)$(man1dir) \
 -	$(DESTDIR)$(pkgdatadir)/icons \
@@ -13,7 +13,7 @@
  
  INSTALL = @INSTALL@
  INSTALL_DATA = @INSTALL_DATA@
-@@ -46,10 +46,9 @@
+@@ -47,10 +47,9 @@
  dep-local:
  install-local: $(installdirs) dvbcut.1 dvbcut.desktop dvbcut.xml
  	$(INSTALL_DATA) dvbcut.1 $(DESTDIR)$(man1dir)/dvbcut.1
@@ -21,8 +21,8 @@
 -	$(INSTALL_DATA) dvbcut.svg $(DESTDIR)$(pkgdatadir)/icons
 -	$(INSTALL_DATA) dvbcut.xml $(DESTDIR)/usr/share/mime/packages
 -	-update-mime-database $(DESTDIR)/usr/share/mime
-+	$(INSTALL_DATA) dvbcut.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps
 +	$(INSTALL_DATA) dvbcut.desktop $(DESTDIR)$(datadir)/applications
++	$(INSTALL_DATA) dvbcut.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps
 +	$(INSTALL_DATA) dvbcut.xml $(DESTDIR)$(datadir)/mime/packages
  
  $(installdirs):

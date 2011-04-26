@@ -1,7 +1,7 @@
---- src/Makefile.in.orig	2011-03-17 23:18:19.246863276 +1100
-+++ src/Makefile.in	2011-03-17 23:20:45.059061716 +1100
-@@ -28,7 +28,7 @@
- datadir = @datadir@
+--- src/Makefile.in.orig	2011-04-25 11:27:24.000000000 +1000
++++ src/Makefile.in	2011-04-26 10:35:06.439380620 +1000
+@@ -29,7 +29,7 @@
+ datarootdir = @datarootdir@
  mandir = @mandir@
  man1dir = $(mandir)/man1
 -helpdir = $(prefix)/share/help

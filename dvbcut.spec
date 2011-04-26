@@ -1,4 +1,4 @@
-%define svnrev 170
+%define svnrev 176
 %if 0%{?fedora} > 6
   %define qt3 qt3
 %else
@@ -6,25 +6,28 @@
 %endif
 
 Name:    dvbcut
-Version: 0.6.0
-Release: 12.svn%{svnrev}%{?dist}
+Version: 0.6.1
+Release: 1.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
 License: GPLv2+ and LGPLv2
 URL:     http://dvbcut.sourceforge.net/
 #  fixes were committed to svn since release, so using svn checkout for latest fixes:
+# original upstream archive location:
 #Source0: http://downloads.sourceforge.net/dvbcut/dvbcut_%{version}.tar.bz2
+# current upstream release location:
+#Source0: http://www.mr511.de/dvbcut/dvbcut-0.6.1.tar.gz
 #     use sh dvbcut-snapshot.sh to create the archive
 Source0: %{name}-svn%{svnrev}.tar.bz2
 # This desktop file was created by hand.
-Source4: %{name}.desktop
 Source5: %{name}-snapshot.sh
 Source6: %{name}-servicemenu.desktop
 # helpfile is placed in /usr/share/help. Look for it under /usr/share/dvbcut instead
 Patch0:  %{name}-fix-help-path.patch
-Patch1:  %{name}-svn170-fix-make-install.patch
-Patch2:  %{name}-svn170-fix-help-install-path.patch
+Patch1:  %{name}-svn176-fix-make-install.patch
+Patch2:  %{name}-svn176-fix-help-install-path.patch
+Patch3:  %{name}-svn176-desktop-additions.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
@@ -51,10 +54,14 @@ dvbcut can use mplayer if available.
 
 
 %prep
+# for release archive
+#%#setup -q
+# for svn tag
 %setup -q -n %{name}-svn%{svnrev}
 %patch0 -b .fix-help-path
 %patch1 -b .fix-make-install
 %patch2 -b .fix-help-install
+%patch3 -b .desktop-improvements
 
 # Fix QTDIR libs in configure
 sed -i 's,$QTDIR/$mr_libdirname,$QTDIR/lib,' configure.in
@@ -83,7 +90,7 @@ make DESTDIR=%{buildroot} install
 
 mkdir -p %{buildroot}%{_datadir}/applications
 desktop-file-install --vendor="" \
-    --dir %{buildroot}%{_datadir}/applications %{SOURCE4}
+    --dir %{buildroot}%{_datadir}/applications dvbcut.desktop
 
 #in future: %{_kde4_servicesdir}, but for now
 mkdir -p %{buildroot}%{_kde4_datadir}/kde4/services/ 
@@ -126,6 +133,17 @@ update-desktop-database &> /dev/null || :
 
 
 %changelog
+* Mon Apr 25 2011 David Timms <iinet.net.au at dtimms> - 0.6.1-1.svn176
+- update to 0.6.1 release post svn176
+- includes upstream enhancement to work with certain transport streams
+- delete upstreamed patches
+- update makefile patches
+- delete desktop file, patch included desktop file instead.
+
+* Fri Apr 22 2011 David Timms <iinet.net.au at dtimms> - 0.6.0-13.svn170
+- add patch to fix code to allow build with gcc-4.6
+- add export dialog close button to suit gnome 3
+
 * Thu Mar 17 2011 David Timms <iinet.net.au at dtimms> - 0.6.0-12.svn170
 - fix Makefile.in to place files into standard locations
 - fix src/Makefile to place online help in standard location
