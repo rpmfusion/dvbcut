@@ -1,4 +1,4 @@
-%define svnrev 166
+%define svnrev 176
 %if 0%{?fedora} > 6
   %define qt3 qt3
 %else
@@ -6,28 +6,28 @@
 %endif
 
 Name:    dvbcut
-Version: 0.6.0
-Release: 10.svn%{svnrev}%{?dist}
+Version: 0.6.1
+Release: 1.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
 License: GPLv2+ and LGPLv2
 URL:     http://dvbcut.sourceforge.net/
 #  fixes were committed to svn since release, so using svn checkout for latest fixes:
+# original upstream archive location:
 #Source0: http://downloads.sourceforge.net/dvbcut/dvbcut_%{version}.tar.bz2
+# current upstream release location:
+#Source0: http://www.mr511.de/dvbcut/dvbcut-0.6.1.tar.gz
 #     use sh dvbcut-snapshot.sh to create the archive
 Source0: %{name}-svn%{svnrev}.tar.bz2
-# Since no icons have been developed by the project, created icons using the
-#     weblogo on the home page. Scaled and text pixel edited using gimp.
-Source1: %{name}.logo.16x16.png
-Source2: %{name}.logo.24x24.png
-Source3: %{name}.logo.48x48.png
 # This desktop file was created by hand.
-Source4: %{name}.desktop
 Source5: %{name}-snapshot.sh
 Source6: %{name}-servicemenu.desktop
-# helpfile is placed in /usr/share/help. Look for it under /usr/share/dvbcut
+# helpfile is placed in /usr/share/help. Look for it under /usr/share/dvbcut instead
 Patch0:  %{name}-fix-help-path.patch
+Patch1:  %{name}-svn176-fix-make-install.patch
+Patch2:  %{name}-svn176-fix-help-install-path.patch
+Patch3:  %{name}-svn176-desktop-additions.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
@@ -54,13 +54,17 @@ dvbcut can use mplayer if available.
 
 
 %prep
+# for release archive
+#%#setup -q
+# for svn tag
 %setup -q -n %{name}-svn%{svnrev}
 %patch0 -b .fix-help-path
-
+%patch1 -b .fix-make-install
+%patch2 -b .fix-help-install
+%patch3 -b .desktop-improvements
 
 # Fix QTDIR libs in configure
 sed -i 's,$QTDIR/$mr_libdirname,$QTDIR/lib,' configure.in
-
 
 # Avoid stripping binaries
 sed -i 's,$(STRIP) $(topdir)/bin/dvbcut$(EXEEXT),,' src/Makefile.in
@@ -75,31 +79,18 @@ unset QTDIR || : ; . /etc/profile.d/qt.sh
 autoconf
 %configure --with-ffmpeg=%{_prefix} \
     --with-ffmpeg-include=%{_includedir}/ffmpeg/
+    helpdir=%{_datadir}/%{name}
+    
 # It does not compile with smp_mflags
 make
 
 
 %install
-rm -rf %{buildroot}
-make install \
-    bindir=%{buildroot}%{_bindir} \
-    helpdir=%{buildroot}%{_datadir}/%{name} \
-    mandir=%{buildroot}%{_mandir}
-
-# manual install of icons
-for iconsize in 16x16 24x24 48x48; do
-  mkdir -p %{buildroot}%{_datadir}/icons/hicolor/$iconsize/apps/
-done
-install -p -m 644 %{SOURCE1} \
-    %{buildroot}%{_datadir}/icons/hicolor/16x16/apps/%{name}.png
-install -p -m 644 %{SOURCE2} \
-    %{buildroot}%{_datadir}/icons/hicolor/24x24/apps/%{name}.png
-install -p -m 644 %{SOURCE3} \
-    %{buildroot}%{_datadir}/icons/hicolor/48x48/apps/%{name}.png
+make DESTDIR=%{buildroot} install
 
 mkdir -p %{buildroot}%{_datadir}/applications
 desktop-file-install --vendor="" \
-    --dir %{buildroot}%{_datadir}/applications %{SOURCE4}
+    --dir %{buildroot}%{_datadir}/applications dvbcut.desktop
 
 #in future: %{_kde4_servicesdir}, but for now
 mkdir -p %{buildroot}%{_kde4_datadir}/kde4/services/ 
@@ -135,13 +126,35 @@ update-desktop-database &> /dev/null || :
 %{_bindir}/%{name}
 %{_mandir}/man1/%{name}.1.gz
 %{_datadir}/applications/*.desktop
-%{_datadir}/icons/hicolor/*/apps/%{name}.png
+%{_datadir}/icons/hicolor/scalable/apps/%{name}.svg
 %{_datadir}/%{name}/dvbcut_*.html
 %{_kde4_datadir}/kde4/services/*.desktop
+%{_datadir}/mime/packages/dvbcut.xml
 
 
 %changelog
-* Mon Oct 26 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-10.svn166 
+* Mon Apr 25 2011 David Timms <iinet.net.au at dtimms> - 0.6.1-1.svn176
+- update to 0.6.1 release post svn176
+- includes upstream enhancement to work with certain transport streams
+- delete upstreamed patches
+- update makefile patches
+- delete desktop file, patch included desktop file instead.
+
+* Fri Apr 22 2011 David Timms <iinet.net.au at dtimms> - 0.6.0-13.svn170
+- add patch to fix code to allow build with gcc-4.6
+- add export dialog close button to suit gnome 3
+
+* Thu Mar 17 2011 David Timms <iinet.net.au at dtimms> - 0.6.0-12.svn170
+- fix Makefile.in to place files into standard locations
+- fix src/Makefile to place online help in standard location
+- del old icons
+- package new icon and mime info files
+- adjust configure/make/install to suit fixed Makefile.in
+
+* Fri Feb 11 2011 David Timms <iinet.net.au at dtimms> - 0.6.0-11.svn170
+- update to svn170 to pull in gcc-4.5 patches
+
+* Mon Oct 26 2009 David Timms <iinet.net.au at dtimms> - 0.6.0-10.svn166
 - update to svn166
 - drop upstreamed gcc44 patch
 - add mpg mimetype to gnome desktop to provide mpeg open with in nautilus
