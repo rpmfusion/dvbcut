@@ -1,4 +1,4 @@
-%define svnrev 176
+%define svnrev 178
 %if 0%{?fedora} > 6
   %define qt3 qt3
 %else
@@ -7,7 +7,7 @@
 
 Name:    dvbcut
 Version: 0.6.1
-Release: 1.svn%{svnrev}%{?dist}
+Release: 2.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -15,7 +15,7 @@ License: GPLv2+ and LGPLv2
 URL:     http://dvbcut.sourceforge.net/
 #  fixes were committed to svn since release, so using svn checkout for latest fixes:
 # original upstream archive location:
-#Source0: http://downloads.sourceforge.net/dvbcut/dvbcut_%{version}.tar.bz2
+#Source0: http://downloads.sourceforge.net/dvbcut/dvbcut_% {version}.tar.bz2
 # current upstream release location:
 #Source0: http://www.mr511.de/dvbcut/dvbcut-0.6.1.tar.gz
 #     use sh dvbcut-snapshot.sh to create the archive
@@ -28,6 +28,7 @@ Patch0:  %{name}-fix-help-path.patch
 Patch1:  %{name}-svn176-fix-make-install.patch
 Patch2:  %{name}-svn176-fix-help-install-path.patch
 Patch3:  %{name}-svn176-desktop-additions.patch
+Patch4:  %{name}-ffmpeg-0.8.2.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
@@ -49,8 +50,8 @@ transport stream (as received via Digital Video Broadcasting, DVB) and save
 these parts into a single MPEG output file. It follows a "keyhole surgery"
 approach where the input video and audio data is mostly kept unchanged, and
 only very few frames at the beginning and/or end of the selected range are 
-re-encoded in order to obtain a valid MPEG file. For mpeg video playback
-dvbcut can use mplayer if available.
+re-encoded in order to obtain a valid MPEG file. For MPEG video playback
+dvbcut can use Mplayer if available.
 
 
 %prep
@@ -62,6 +63,7 @@ dvbcut can use mplayer if available.
 %patch1 -b .fix-make-install
 %patch2 -b .fix-help-install
 %patch3 -b .desktop-improvements
+%patch4 -b .ffmpeg
 
 # Fix QTDIR libs in configure
 sed -i 's,$QTDIR/$mr_libdirname,$QTDIR/lib,' configure.in
@@ -92,7 +94,7 @@ mkdir -p %{buildroot}%{_datadir}/applications
 desktop-file-install --vendor="" \
     --dir %{buildroot}%{_datadir}/applications dvbcut.desktop
 
-#in future: %{_kde4_servicesdir}, but for now
+#in future: % {_kde4_servicesdir}, but for now
 mkdir -p %{buildroot}%{_kde4_datadir}/kde4/services/ 
 desktop-file-install                                 \
     --dir=%{buildroot}%{_kde4_datadir}/kde4/services \
@@ -133,6 +135,10 @@ update-desktop-database &> /dev/null || :
 
 
 %changelog
+* Mon Sep  5 2011 David Timms <iinet.net.au at dtimms> - 0.6.1-2.svn178
+- update to 0.6.1 release post svn178
+- add patch for ffmpeg-0.8.2
+
 * Mon Apr 25 2011 David Timms <iinet.net.au at dtimms> - 0.6.1-1.svn176
 - update to 0.6.1 release post svn176
 - includes upstream enhancement to work with certain transport streams

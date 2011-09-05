@@ -1,0 +1,124 @@
+diff -up src/lavfmuxer.cpp.ffmpeg src/lavfmuxer.cpp
+--- src/lavfmuxer.cpp.ffmpeg	2011-04-25 03:27:24.000000000 +0200
++++ src/lavfmuxer.cpp	2011-08-24 21:08:28.000000000 +0200
+@@ -34,12 +34,20 @@ extern "C" {
+ lavfmuxer::lavfmuxer(const char *format, uint32_t audiostreammask, mpgfile &mpg, const char *filename)
+     : muxer(), avfc(0), fileopened(false)
+   {
++#if FF_API_GUESS_FORMAT
+   fmt = guess_format(format, NULL, NULL);
++#else
++  fmt = av_guess_format(format, NULL, NULL);
++#endif
+   if (!fmt) {
+     return;
+     }
+ 
++#if FF_API_ALLOC_FORMAT_CONTEXT
+   avfc=av_alloc_format_context();
++#else
++  avfc=avformat_alloc_context();
++#endif
+   if (!avfc)
+     return;
+ 
+@@ -73,7 +81,11 @@ lavfmuxer::lavfmuxer(const char *format,
+         av_free(s->codec);
+       s->codec = avcodec_alloc_context();
+       avcodec_get_context_defaults(s->codec);
++#if LIBAVCODEC_VERSION_MAJOR < 53
+       s->codec->codec_type=CODEC_TYPE_AUDIO;
++#else
++      s->codec->codec_type=AVMEDIA_TYPE_AUDIO;
++#endif
+       s->codec->codec_id = (mpg.getstreamtype(astr)==streamtype::ac3audio) ?
+ 	CODEC_ID_AC3 : CODEC_ID_MP2;
+       s->codec->rc_buffer_size = 224*1024*8;
+@@ -92,6 +104,7 @@ lavfmuxer::lavfmuxer(const char *format,
+ 	    int16_t samples[AVCODEC_MAX_AUDIO_FRAME_SIZE/sizeof(int16_t)];
+ 	    int frame_size=sizeof(samples);
+ 	    //fprintf(stderr, "** decode audio size=%d\n", sd->inbytes());
++#if FF_API_AUDIO_OLD
+ #if LIBAVCODEC_VERSION_INT >= ((52<<16)+(0<<8)+0)
+ 	    avcodec_decode_audio2
+ #else
+@@ -99,6 +112,14 @@ lavfmuxer::lavfmuxer(const char *format,
+ #endif
+ 	      (s->codec,samples,&frame_size,
+ 	       (uint8_t*) sd->getdata(),sd->inbytes());
++#else
++	    AVPacket avpkt;
++	    av_init_packet(&avpkt);
++	    avpkt.data = (uint8_t *) sd->getdata();
++	    avpkt.size = sd->inbytes();
++	    avcodec_decode_audio3
++	      (s->codec,samples,&frame_size,&avpkt);
++#endif
+ 	    avcodec_close(s->codec);
+ 	  }
+ 	  break;
+diff -up src/lavfmuxer.h.ffmpeg src/lavfmuxer.h
+--- src/lavfmuxer.h.ffmpeg	2011-04-25 03:27:24.000000000 +0200
++++ src/lavfmuxer.h	2011-08-24 19:46:39.000000000 +0200
+@@ -73,7 +73,11 @@ public:
+     avp.dts=dts;
+     avp.stream_index=st[str].stream_index;
+     if (flags & MUXER_FLAG_KEY)
++#if LIBAVCODEC_VERSION_MAJOR < 53
+       avp.flags |= PKT_FLAG_KEY;
++#else
++      avp.flags |= AV_PKT_FLAG_KEY;
++#endif
+ 
+     int rv=av_interleaved_write_frame(avfc,&avp);
+ 
+diff -up src/mpgfile.cpp.ffmpeg src/mpgfile.cpp
+--- src/mpgfile.cpp.ffmpeg	2011-04-25 03:27:24.000000000 +0200
++++ src/mpgfile.cpp	2011-08-24 21:14:54.000000000 +0200
+@@ -161,8 +161,17 @@ void mpgfile::decodegop(int start, int s
+       while (decodebytes>0)
+       {
+         frameFinished=0;
++#if FF_API_VIDEO_OLD
+         int bytesDecoded=avcodec_decode_video(S->avcc, avf, &frameFinished,
+                                               (uint8_t*) data, decodebytes);
++#else
++        AVPacket avpkt;
++        av_init_packet(&avpkt);
++        avpkt.data = (uint8_t *) data;
++        avpkt.size = decodebytes;
++        int bytesDecoded=avcodec_decode_video2(S->avcc, avf, &frameFinished,
++                                               &avpkt);
++#endif
+         if (bytesDecoded<0)
+         {
+           fprintf(stderr,"libavcodec error while decoding frame #%d\n",pic);
+@@ -201,7 +210,16 @@ void mpgfile::decodegop(int start, int s
+   if (pic < stop)
+   {
+     int frameFinished=0;
++#if FF_API_VIDEO_OLD
+     avcodec_decode_video(S->avcc, avf, &frameFinished, NULL, 0);
++#else
++    AVPacket avpkt;
++    av_init_packet(&avpkt);
++    avpkt.data = NULL;
++    avpkt.size = 0;
++    avcodec_decode_video2(S->avcc, avf, &frameFinished,
++                                           &avpkt);
++#endif
+     if (frameFinished)
+     {
+       if (last_cpn!=avf->coded_picture_number)
+@@ -248,7 +266,11 @@ void mpgfile::initcodeccontexts(int vid)
+     stream *S=&s[VIDEOSTREAM];
+     S->id=vid;
+     S->allocavcc();
++#if LIBAVCODEC_VERSION_MAJOR < 53
+     S->avcc->codec_type=CODEC_TYPE_VIDEO;
++#else
++    S->avcc->codec_type=AVMEDIA_TYPE_VIDEO;
++#endif
+     S->avcc->codec_id=CODEC_ID_MPEG2VIDEO;
+     S->dec=avcodec_find_decoder(CODEC_ID_MPEG2VIDEO);
+     S->enc=avcodec_find_encoder(CODEC_ID_MPEG2VIDEO);
