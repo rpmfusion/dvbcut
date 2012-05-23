@@ -1,5 +1,5 @@
 %define svnrev 178
-%if 0%{?fedora} > 6
+%if 0%{?fedora} > 6 || 0%{?rhel} > 5
   %define qt3 qt3
 %else
   %define qt3 qt
@@ -65,7 +65,7 @@ dvbcut can use Mplayer if available.
 %patch2 -b .fix-help-install
 %patch3 -b .desktop-improvements
 %patch4 -b .ffmpeg
-%patch5 -b .gcc47
+%patch5 -p1 -b .gcc47
 
 # Fix QTDIR libs in configure
 sed -i 's,$QTDIR/$mr_libdirname,$QTDIR/lib,' configure.in
