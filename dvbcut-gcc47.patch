@@ -1,0 +1,11 @@
+diff -up dvbcut-svn178/src/main.cpp.gcc47 dvbcut-svn178/src/main.cpp
+--- dvbcut-svn178/src/main.cpp.gcc47	2011-09-05 12:13:54.000000000 +0200
++++ dvbcut-svn178/src/main.cpp	2012-05-23 21:53:17.593497328 +0200
+@@ -25,6 +25,7 @@
+ #include <clocale>
+ #include <string>
+ #include <list>
++#include <unistd.h>
+ 
+ #ifdef HAVE_LIB_AO
+ #include <ao/ao.h>
