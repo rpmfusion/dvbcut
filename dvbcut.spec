@@ -7,7 +7,7 @@
 
 Name:    dvbcut
 Version: 0.6.1
-Release: 5.svn%{svnrev}%{?dist}
+Release: 6.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -137,6 +137,9 @@ update-desktop-database &> /dev/null || :
 
 
 %changelog
+* Tue Jun 26 2012 Nicolas Chauvet <kwizart@gmail.com> - 0.6.1-6.svn178
+- Rebuilt for FFmpeg
+
 * Wed May 23 2012 Nicolas Chauvet <kwizart@gmail.com> - 0.6.1-5.svn178
 - Fix FTBFS with gcc47
 
