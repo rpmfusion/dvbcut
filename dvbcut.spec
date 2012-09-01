@@ -1,5 +1,5 @@
-%define svnrev 178
-%if 0%{?fedora} > 6
+%define svnrev 179
+%if 0%{?fedora} > 6 || 0%{?rhel} > 5
   %define qt3 qt3
 %else
   %define qt3 qt
@@ -7,7 +7,7 @@
 
 Name:    dvbcut
 Version: 0.6.1
-Release: 2.svn%{svnrev}%{?dist}
+Release: 7.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -28,7 +28,8 @@ Patch0:  %{name}-fix-help-path.patch
 Patch1:  %{name}-svn176-fix-make-install.patch
 Patch2:  %{name}-svn176-fix-help-install-path.patch
 Patch3:  %{name}-svn176-desktop-additions.patch
-Patch4:  %{name}-ffmpeg-0.8.2.patch
+Patch6:  %{name}-179-vs-ubuntu-12.04.diff
+Patch7:  %{name}-svn179-ffmpeg-0.11.1.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
@@ -63,7 +64,8 @@ dvbcut can use Mplayer if available.
 %patch1 -b .fix-make-install
 %patch2 -b .fix-help-install
 %patch3 -b .desktop-improvements
-%patch4 -b .ffmpeg
+%patch6 -b .orig
+%patch7 -p1 -b .orig
 
 # Fix QTDIR libs in configure
 sed -i 's,$QTDIR/$mr_libdirname,$QTDIR/lib,' configure.in
@@ -94,11 +96,9 @@ mkdir -p %{buildroot}%{_datadir}/applications
 desktop-file-install --vendor="" \
     --dir %{buildroot}%{_datadir}/applications dvbcut.desktop
 
-#in future: % {_kde4_servicesdir}, but for now
 mkdir -p %{buildroot}%{_kde4_datadir}/kde4/services/ 
-desktop-file-install                                 \
-    --dir=%{buildroot}%{_kde4_datadir}/kde4/services \
-    %{SOURCE6}
+cp %{SOURCE6} %{buildroot}%{_kde4_datadir}/kde4/services/
+
 
 %clean
 rm -rf %{buildroot}
@@ -135,6 +135,12 @@ update-desktop-database &> /dev/null || :
 
 
 %changelog
+* Wed Aug 29 2012 David Timms <iinet.net.au at dtimms> - 0.6.1-7.svn179
+- add ffmpeg-0.10.4 patch dvbcut-179-vs-ubuntu-12.04.diff from Olaf Dietsche
+- drop ffmpeg-0.8.2 patch superseded by ffmpeg-0.10.4 patch
+- add ffmpeg-0.11.1 patch
+- modify kde service install from desktop-file-install to copy.
+
 * Mon Sep  5 2011 David Timms <iinet.net.au at dtimms> - 0.6.1-2.svn178
 - update to 0.6.1 release post svn178
 - add patch for ffmpeg-0.8.2
