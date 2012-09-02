@@ -1,0 +1,13 @@
+diff -ur dvbcut.orig/src/lavfmuxer.cpp dvbcut/src/lavfmuxer.cpp
+--- dvbcut.orig/src/lavfmuxer.cpp	2012-09-01 21:43:18.000000000 +1000
++++ dvbcut/src/lavfmuxer.cpp	2012-09-03 08:03:24.966156637 +1000
+@@ -99,7 +99,7 @@
+ 	    int16_t samples[AVCODEC_MAX_AUDIO_FRAME_SIZE/sizeof(int16_t)];
+ 	    int frame_size=sizeof(samples);
+ 	    //fprintf(stderr, "** decode audio size=%d\n", sd->inbytes());
+-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 35, 0)
++#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 0, 0)
+             AVPacket avpkt;
+             av_init_packet(&avpkt);
+             avpkt.data = (uint8_t*)sd->getdata();
+
