@@ -7,7 +7,7 @@
 
 Name:    dvbcut
 Version: 0.6.1
-Release: 8.svn%{svnrev}%{?dist}
+Release: 9.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -135,6 +135,9 @@ update-desktop-database &> /dev/null || :
 
 
 %changelog
+* Sun Apr 28 2013 Nicolas Chauvet <kwizart@gmail.com> - 0.6.1-9.svn179
+- https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
+
 * Sat Nov 24 2012 Nicolas Chauvet <kwizart@gmail.com> - 0.6.1-8.svn179
 - Rebuilt for FFmpeg 1.0
 
