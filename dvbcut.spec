@@ -7,7 +7,7 @@
 
 Name:    dvbcut
 Version: 0.6.1
-Release: 9.svn%{svnrev}%{?dist}
+Release: 10.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -82,7 +82,7 @@ sed -i '/ffmpeg.src/d' DISTFILES
 unset QTDIR || : ; . /etc/profile.d/qt.sh
 autoconf
 %configure --with-ffmpeg=%{_prefix} \
-    --with-ffmpeg-include=%{_includedir}/ffmpeg/
+    --with-ffmpeg-include=%{_includedir}/ffmpeg
     helpdir=%{_datadir}/%{name}
     
 # It does not compile with smp_mflags
@@ -135,6 +135,11 @@ update-desktop-database &> /dev/null || :
 
 
 %changelog
+* Sun May 19 2013 David Timms <iinet.net.au at dtimms> - 0.6.1-10.svn179
+- fix changelog dates to match day as detected by mock-1.1.32-1.fc18.noarch
+- fix bonus / in ffmpeg include path triggering build failure extracting debug
+      info debugedit: canonicalization unexpectedly shrank by one character
+    
 * Sun Apr 28 2013 Nicolas Chauvet <kwizart@gmail.com> - 0.6.1-9.svn179
 - https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
 
@@ -234,7 +239,7 @@ update-desktop-database &> /dev/null || :
 * Wed Dec 31 2008 David Timms <iinet.net.au at dtimms> - 0.5.4-5.20081218
 - cosmetic change, and rebuild Andrea's changes for review
 
-* Mon Dec 28 2008 Andrea Musuruane <musuruan@gmail.com> - 0.5.4-4.20081218
+* Mon Dec 29 2008 Andrea Musuruane <musuruan@gmail.com> - 0.5.4-4.20081218
 - removed ugly configure hack in %%install
 - removed %%{?_smp_mflags} from make invocation
 - patched configure to fix qt lib dir
@@ -294,7 +299,7 @@ update-desktop-database &> /dev/null || :
 * Sat Jun 07 2008 David Timms <iinet.net.au at dtimms> - 0.5.4-0.5.20080607svn125.fc9
 - update to current svn revision, unsuccessful compile. SCons issues.
 
-* Sat Mar 14 2008 David Timms <iinet.net.au at dtimms> - 0.5.4-0.4.20080314svn118.fc9
+* Sat Mar 15 2008 David Timms <iinet.net.au at dtimms> - 0.5.4-0.4.20080314svn118.fc9
 - add BuildRequires desktop-file-utils so that it builds properly in mock.
 - update to new upstream svn version.
 - drop patch0-4 since similar have been committed upstream.
