@@ -7,7 +7,7 @@
 
 Name:    dvbcut
 Version: 0.6.1
-Release: 17.svn%{svnrev}%{?dist}
+Release: 18.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -31,6 +31,7 @@ Patch3:  %{name}-svn176-desktop-additions.patch
 Patch6:  %{name}-179-vs-ubuntu-12.04.diff
 Patch7:  %{name}-svn179-ffmpeg-0.11.1.patch
 Patch8:  %{name}-svn179-ffmpeg-2.0-compatibility.patch
+Patch9:  %{name}-svn179-ffmpeg-2.4.3-compatibility.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
@@ -68,6 +69,7 @@ dvbcut can use Mplayer if available.
 %patch6 -b .ubuntu
 %patch7 -p1 -b .ffmpeg-0.11.1
 %patch8 -b .ffmpeg-2.0
+%patch9 -p1 -b .ffmpeg-2.4.3
 
 # Fix QTDIR libs in configure
 sed -i 's,$QTDIR/$mr_libdirname,$QTDIR/lib,' configure.in
@@ -137,6 +139,9 @@ update-desktop-database &> /dev/null || :
 
 
 %changelog
+* Mon Oct 20 2014 David Timms <iinet.net.au at dtimms> - 0.6.1-18.svn179
+- add patch for ffmpeg-2.4.3 for dropped av_new_stream().
+
 * Fri Sep 26 2014 Nicolas Chauvet <kwizart@gmail.com> - 0.6.1-17.svn179
 - Rebuilt for FFmpeg 2.4.x
 
