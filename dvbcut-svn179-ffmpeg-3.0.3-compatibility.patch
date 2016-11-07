@@ -1,0 +1,1100 @@
+diff -ur dvbcut-svn179.orig/src/avframe.cpp dvbcut-svn179/src/avframe.cpp
+--- dvbcut-svn179.orig/src/avframe.cpp	2012-08-20 00:00:04.000000000 +1000
++++ dvbcut-svn179/src/avframe.cpp	2016-11-05 18:14:00.482888961 +1100
+@@ -23,26 +23,52 @@
+ #include <cstdio>
+ #include "avframe.h"
+ 
++#define IMAGE_ALIGN_VALUE 1 // no idea what an ideal value is.
++
+ #ifdef HAVE_LIB_SWSCALE
+ avframe::avframe() : tobefreed(0),w(0),h(0),dw(0),pix_fmt(),img_convert_ctx(0)
+ #else
+ avframe::avframe() : tobefreed(0),w(0),h(0),dw(0),pix_fmt()
+ #endif
+   {
+-  f=avcodec_alloc_frame();
++  f=av_frame_alloc();
+   }
+ 
+ avframe::avframe(AVFrame *src, AVCodecContext *ctx) : f(0),tobefreed(0)
+   {
+-  f=avcodec_alloc_frame();
+-  tobefreed=malloc(avpicture_get_size(ctx->pix_fmt, ctx->width, ctx->height));
+-
+-  avpicture_fill((AVPicture *)f,
++  f=av_frame_alloc();
++/*
++int avpicture_get_size       (enum AVPixelFormat pix_fmt, int width, int height) 	
++Deprecated:
++    use av_image_get_buffer_size() instead:
++int av_image_get_buffer_size (enum AVPixelFormat pix_fmt, int width, int height, int align)
++https://www.ffmpeg.org/doxygen/3.0/group__lavu__picture.html#ga24a67963c3ae0054a2a4bab35930e694	
++
++*/
++  tobefreed=malloc(av_image_get_buffer_size(ctx->pix_fmt, ctx->width, ctx->height, IMAGE_ALIGN_VALUE));
++
++/*
++int avpicture_fill      (AVPicture * picture, const uint8_t * ptr
++    , enum AVPixelFormat pix_fmt, int width, int height)
++Deprecated:
++    use av_image_fill_arrays() instead:
++int av_image_fill_arrays(uint8_t * dst_data[4], int dst_linesize[4], const uint8_t * src
++    ,	enum AVPixelFormat pix_fmt, int width, int height, int align) 	
++*/
++  av_image_fill_arrays(f->data, f->linesize,
+                  (u_int8_t*)tobefreed,
+-                 ctx->pix_fmt,ctx->width,ctx->height);
++                 ctx->pix_fmt, ctx->width, ctx->height, IMAGE_ALIGN_VALUE);
+ 
+-#if LIBAVCODEC_VERSION_INT >= (51 << 16)
+-  av_picture_copy((AVPicture *)f, (const AVPicture *) src,
++#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(51, 0, 0)
++/*
++void av_picture_copy(AVPicture * dst, const AVPicture * src
++    , enum AVPixelFormat pix_fmt, int	width, int height) 	
++Deprecated: av_image_copy() instead:
++void av_image_copy 	(uint8_t * dst_data[4], int dst_linesizes[4]
++    , const uint8_t * src_data[4], const int src_linesizes[4]
++		, enum AVPixelFormat pix_fmt, int width, int height)
++*/
++  av_image_copy(f->data,  f->linesize, (const uint8_t **)src->data, src->linesize,
+                   ctx->pix_fmt, ctx->width, ctx->height);
+ #else
+   img_copy((AVPicture *)f, (const AVPicture *) src,
+@@ -65,7 +91,7 @@
+   dw=w*ctx->sample_aspect_ratio.num/ctx->sample_aspect_ratio.den;
+ #ifdef HAVE_LIB_SWSCALE
+   img_convert_ctx=sws_getContext(w, h, pix_fmt, 
+-                                 w, h, PIX_FMT_BGR24, SWS_BICUBIC, 
++                                 w, h, AV_PIX_FMT_BGR24, SWS_BICUBIC, 
+                                  NULL, NULL, NULL);
+ #endif
+   }
+@@ -91,20 +117,20 @@
+ #endif
+     return QImage();
+ 
+-  uint8_t *rgbbuffer=(uint8_t*)malloc(avpicture_get_size(PIX_FMT_RGB24, w, h)+64);
++  uint8_t *rgbbuffer=(uint8_t*)malloc(av_image_get_buffer_size(AV_PIX_FMT_RGB24, w, h, IMAGE_ALIGN_VALUE)+64);
+   int headerlen=sprintf((char *) rgbbuffer, "P6\n%d %d\n255\n", w, h);
+ 
+-  AVFrame *avframergb=avcodec_alloc_frame();
++  AVFrame *avframergb=av_frame_alloc();
+ 
+-  avpicture_fill((AVPicture*)avframergb,
++  av_image_fill_arrays(avframergb->data, avframergb->linesize,
+                  rgbbuffer+headerlen,
+-                 PIX_FMT_RGB24,w,h);
++                 AV_PIX_FMT_RGB24, w, h, IMAGE_ALIGN_VALUE);
+ 
+ #ifdef HAVE_LIB_SWSCALE
+   sws_scale(img_convert_ctx, f->data, f->linesize, 0, h, 
+               avframergb->data, avframergb->linesize);
+ #else
+-  img_convert((AVPicture *)avframergb, PIX_FMT_RGB24, (AVPicture*)f, pix_fmt, w, h);
++  img_convert((AVPicture *)avframergb, AV_PIX_FMT_RGB24, (AVPicture*)f, pix_fmt, w, h);
+ #endif
+ 
+   QImage im;
+diff -ur dvbcut-svn179.orig/src/avframe.h dvbcut-svn179/src/avframe.h
+--- dvbcut-svn179.orig/src/avframe.h	2012-08-20 00:00:04.000000000 +1000
++++ dvbcut-svn179/src/avframe.h	2016-11-05 18:14:00.480888996 +1100
+@@ -23,6 +23,7 @@
+ 
+ extern "C" {
+ #include <avcodec.h>
++#include <libavutil/imgutils.h>
+ #ifdef HAVE_LIB_SWSCALE
+ #include <swscale.h>
+ #endif
+@@ -39,7 +40,7 @@
+   AVFrame *f;
+   void *tobefreed;
+   int w,h,dw;
+-  enum PixelFormat pix_fmt;
++  enum AVPixelFormat pix_fmt;
+ #ifdef HAVE_LIB_SWSCALE
+   struct SwsContext *img_convert_ctx;
+ #endif
+@@ -69,7 +70,7 @@
+     {
+     return dw;
+     }
+-  enum PixelFormat getpixfmt() const
++  enum AVPixelFormat getpixfmt() const
+     {
+     return pix_fmt;
+     }
+diff -ur dvbcut-svn179.orig/src/buffer.cpp dvbcut-svn179/src/buffer.cpp
+--- dvbcut-svn179.orig/src/buffer.cpp	2012-08-20 00:00:04.000000000 +1000
++++ dvbcut-svn179/src/buffer.cpp	2016-11-05 18:14:00.483888944 +1100
+@@ -386,7 +386,10 @@
+     }
+ #endif
+     size_t len = mmapsize;
+-    if (newpos + len > i->end)
++// dvbcut_off_t + size_t > std::vector<infile>::const_iterator
++// (aka 'long') + (unsigned int) > (unsigned int)
++//    if ((newpos > 0) && (static_cast<int>(newpos) + len > i->end))
++    if ((newpos > 0) && (static_cast<unsigned int>(newpos + len) > i->end))
+       len = i->end - newpos;
+     void *ptr = ::mmap(0, len, PROT_READ, MAP_SHARED, i->fd, relpos);
+     if (ptr != MAP_FAILED) {
+@@ -452,7 +455,9 @@
+       needseek = false;
+     }
+     size_t len = size - writepos;
+-    if (len > i->end - seekpos)
++//       size_t > unsigned int - dvbcut_off_t
++// unsigned int > unsigned int - aka long
++    if ((seekpos > 0) && (len > static_cast<unsigned int>(i->end - seekpos)))
+       len = i->end - seekpos;
+     assert(len > 0);
+     ssize_t n = ::read(i->fd, (char*)d + writepos, len);
+diff -ur dvbcut-svn179.orig/src/dvbcut.cpp dvbcut-svn179/src/dvbcut.cpp
+--- dvbcut-svn179.orig/src/dvbcut.cpp	2016-11-05 19:09:50.368119901 +1100
++++ dvbcut-svn179/src/dvbcut.cpp	2016-11-05 18:14:00.490888821 +1100
+@@ -282,15 +282,15 @@
+       EventListItem::eventtype evt=eli->geteventtype();
+ 
+       if (evt==EventListItem::start)
+-	elemname="start";
++        elemname="start";
+       else if (evt==EventListItem::stop)
+-	elemname="stop";
++        elemname="stop";
+       else if (evt==EventListItem::chapter)
+-	elemname="chapter";
++        elemname="chapter";
+       else if (evt==EventListItem::bookmark)
+-	elemname="bookmark";
++        elemname="bookmark";
+       else
+-	continue;
++        continue;
+ 
+       QDomElement elem=doc.createElement(elemname);
+       elem.setAttribute("picture",eli->getpicture());
+@@ -429,7 +429,8 @@
+   samples = samples>0 ? samples: 1;
+   samples = samples>abs(range) ? abs(range)+1: samples;
+ 
+-  int bestpic = startpic+range, bestnr=0;
++  int bestpic = startpic+range;
++  //, bestnr=0;
+   double bestval = 0.;
+   int dp = range/(samples-1);
+   int ncol = nr*ng*nb;
+@@ -487,7 +488,7 @@
+       if(entropy>bestval) {
+         bestval=entropy;
+         bestpic=pic;
+-        bestnr=n;
++//        bestnr=n;
+       }
+   }
+   //fprintf(stderr,"choosing sample / frame: %4d / %7d\n!", bestnr, bestpic);
+@@ -517,7 +518,7 @@
+     }
+   }
+ 
+-  std::auto_ptr<exportdialog> expd(new exportdialog(expfilen,this));
++  std::unique_ptr<exportdialog> expd(new exportdialog(expfilen,this));
+   expd->muxercombo->insertItem("MPEG program stream/DVD (DVBCUT multiplexer)");
+   expd->muxercombo->insertItem("MPEG program stream (DVBCUT multiplexer)");
+   expd->muxercombo->insertItem("MPEG program stream/DVD (libavformat)");
+@@ -575,7 +576,7 @@
+                        int(lastch/(3600*90000)),
+                        int(lastch/(60*90000))%60,
+                        int(lastch/90000)%60,
+-                       int(lastch/90)%1000	);
++                       int(lastch/90)%1000);
+         // append chapter marks to lists for plain text / dvdauthor xml-file         
+         chapterstring+=chapter;
+         chaptercolumn+=chapter;
+@@ -625,12 +626,12 @@
+     if (child_pid == 0) {
+       ::close(pipe_fds[1]);
+       if (pipe_fds[0] != STDIN_FILENO) {
+-	dup2(pipe_fds[0], STDIN_FILENO);
++        dup2(pipe_fds[0], STDIN_FILENO);
+       }
+       //fprintf(stderr, "Executing %s\n", expcmd.c_str()+pos);
+       for (int fd=0; fd<256; ++fd)
+-	if (fd != STDIN_FILENO && fd != STDOUT_FILENO && fd != STDERR_FILENO)
+-	  ::close(fd);
++        if (fd != STDIN_FILENO && fd != STDOUT_FILENO && fd != STDERR_FILENO)
++          ::close(fd);
+       execl("/bin/sh", "sh", "-c", expcmd.c_str()+pos, (char *)0);
+       _exit(127);
+     }
+@@ -661,7 +662,7 @@
+ 
+   //   lavfmuxer mux(fmt,*mpg,outfilename);
+ 
+-  std::auto_ptr<muxer> mux;
++  std::unique_ptr<muxer> mux;
+   uint32_t audiostreammask(0);
+ 
+   for(int a=0;a<mpg->getaudiostreams();++a)
+@@ -673,17 +674,17 @@
+ 
+   switch(expfmt) {
+     case 1:
+-      mux=std::auto_ptr<muxer>(new mpegmuxer(audiostreammask,*mpg,out_file.c_str(),false,0));
++      mux=std::unique_ptr<muxer>(new mpegmuxer(audiostreammask,*mpg,out_file.c_str(),false,0));
+       break;
+     case 2:
+-      mux=std::auto_ptr<muxer>(new lavfmuxer("dvd",audiostreammask,*mpg,out_file.c_str()));
++      mux=std::unique_ptr<muxer>(new lavfmuxer("dvd",audiostreammask,*mpg,out_file.c_str()));
+       break;
+     case 3:
+-      mux=std::auto_ptr<muxer>(new lavfmuxer("mpegts",audiostreammask,*mpg,out_file.c_str()));
++      mux=std::unique_ptr<muxer>(new lavfmuxer("mpegts",audiostreammask,*mpg,out_file.c_str()));
+       break;
+     case 0:
+     default:
+-      mux=std::auto_ptr<muxer>(new mpegmuxer(audiostreammask,*mpg,out_file.c_str()));
++      mux=std::unique_ptr<muxer>(new mpegmuxer(audiostreammask,*mpg,out_file.c_str()));
+       break;
+   }
+ 
+@@ -718,7 +719,7 @@
+       stoppts=quick_picture_lookup[num].stoppts;
+       
+       log->printheading("%d. Exporting %d pictures: %s .. %s",
+-			num+1,stoppic-startpic,ptsstring(startpts).c_str(),ptsstring(stoppts).c_str());
++          num+1,stoppic-startpic,ptsstring(startpts).c_str(),ptsstring(stoppts).c_str());
+       mpg->savempg(*mux,startpic,stoppic,savedpic,quick_picture_lookup.back().outpicture,log);
+ 
+       savedpic=quick_picture_lookup[num].outpicture;
+@@ -728,10 +729,10 @@
+   mux.reset();
+ 
+   log->printheading("Saved %d pictures (%02d:%02d:%02d.%03d)",savedpic,
+-		    int(savedtime/(3600*90000)),
+-		    int(savedtime/(60*90000))%60,
+-		    int(savedtime/90000)%60,
+-		    int(savedtime/90)%1000	);
++      int(savedtime/(3600*90000)),
++      int(savedtime/(60*90000))%60,
++      int(savedtime/90000)%60,
++      int(savedtime/90)%1000);
+ 
+ #ifndef __WIN32__
+   if (child_pid > 0) {
+@@ -1152,7 +1153,7 @@
+   dvbcut_off_t partoffset;
+   int partindex = buf.getfilenum(offset, partoffset);
+   if (partindex == -1)
+-    return;	// what else can we do?
++    return; // what else can we do?
+ 
+   mplayer_process=new QProcess(QString("mplayer"));
+   mplayer_process->addArgument("-noconsolecontrols");
+@@ -1298,13 +1299,13 @@
+     fine=false;
+   } else if (relpic<=-settings().jog_threshold) {
+     fine=false;
+-  } else
++  } else {
+     fine=true;
++  }
++  if (curpic!=newpic)
++    linslider->setValue(newpic);
+ 
+-    if (curpic!=newpic)
+-      linslider->setValue(newpic);
+-
+-    fine=false;
++  fine=false;
+ }
+ 
+ 
+@@ -1743,81 +1744,89 @@
+         line=line.stripWhiteSpace();
+       }
+       if (line.startsWith(QString("<!DOCTYPE"))
+-       || line.startsWith(QString("<?xml"))) {
++          || line.startsWith(QString("<?xml"))) {
+         infile.at(0);
+         QString errormsg;
+         if (domdoc.setContent(&infile,false,&errormsg)) {
+           QDomElement docelem = domdoc.documentElement();
+           if (docelem.tagName() != "dvbcut") {
+             critical("Failed to read project file - dvbcut",
+-	      QString(filename) + ":\nNot a valid dvbcut project file");
++                QString(filename) + ":\nNot a valid dvbcut project file");
+             fileOpenAction->setEnabled(true);
+             return;
+           }
+-	  // parse elements, new-style first
+-	  QDomNode n;
+-          filenames.clear();
+-	  if (!nogui) {    
+-	    // in batch mode CLI-switches have priority!              
+-	    idxfilename.clear();
+-	    expfilename.clear();
+-	  }    
+-	  for (n = domdoc.documentElement().firstChild(); !n.isNull(); n = n.nextSibling()) {
+-	    QDomElement e = n.toElement();
+-	    if (e.isNull())
+-	      continue;
+-	    if (e.tagName() == "mpgfile") {
+-	      QString qs = e.attribute("path");
+-	      if (!qs.isEmpty())
+-		filenames.push_back((const char*)qs);
+-	    }
+-	    else if (e.tagName() == "idxfile" && idxfilename.empty()) {
+-	      QString qs = e.attribute("path");
+-	      if (!qs.isEmpty())
+-		idxfilename = (const char*)qs;
+-	    }
+-	    else if (e.tagName() == "expfile" && expfilename.empty()) {           
+-	      QString qs = e.attribute("path");
+-	      if (!qs.isEmpty())
+-		expfilename = (const char*)qs;
+-	      qs = e.attribute("format");
++          // parse elements, new-style first
++          QDomNode n;
++            filenames.clear();
++          if (!nogui) {    
++            // in batch mode CLI-switches have priority!              
++            idxfilename.clear();
++            expfilename.clear();
++          }    
++          for (n = domdoc.documentElement().firstChild(); !n.isNull(); n = n.nextSibling()) {
++            QDomElement e = n.toElement();
++            if (e.isNull())
++              continue;
++            if (e.tagName() == "mpgfile") {
++              QString qs = e.attribute("path");
++              if (!qs.isEmpty()) {
++                filenames.push_back((const char*)qs);
++              }
++            }
++            else if (e.tagName() == "idxfile" && idxfilename.empty()) {
++              QString qs = e.attribute("path");
++              if (!qs.isEmpty())
++              {
++                idxfilename = (const char*)qs;
++              }
++            }
++            else if (e.tagName() == "expfile" && expfilename.empty()) {           
++              QString qs = e.attribute("path");
++              if (!qs.isEmpty()) {
++                expfilename = (const char*)qs;
++              }
++              qs = e.attribute("format");
+               bool okay=false;
+-	      if (!qs.isEmpty()) {
++              if (!qs.isEmpty()) {
+                 int val = qs.toInt(&okay,0);
+-		if(okay) exportformat = val;
++                if(okay) {
++                  exportformat = val;
++                }
+               }  
+-	    }
+-	  }
+-	  // try old-style project file format
+-	  if (filenames.empty()) {
+-	    QString qs = docelem.attribute("mpgfile");
+-	    if (!qs.isEmpty())
+-	      filenames.push_back((const char*)qs);
+-	  }
+-	  if (idxfilename.empty()) {
+-	    QString qs = docelem.attribute("idxfile");
+-	    if (!qs.isEmpty())
+-	      idxfilename = (const char*)qs;
+-	  }
+-	  if (expfilename.empty()) {
+-	    QString qs = docelem.attribute("expfile");
+-	    if (!qs.isEmpty())
+-	      expfilename = (const char*)qs;
+-	  }
+-	  // sanity check
+-	  if (filenames.empty()) {
+-	    critical("Failed to read project file - dvbcut",
+-	      QString(filename) + ":\nNo MPEG filename given in project file");
+-	    fileOpenAction->setEnabled(true);
+-	    return;
+-	  }
+-          prjfilename = filename;
+-        }
+-        else {
+-          critical("Failed to read project file - dvbcut",
+-	    QString(filename) + ":\n" + errormsg);
+-          fileOpenAction->setEnabled(true);
+-          return;
++            }
++          }
++          // try old-style project file format
++          if (filenames.empty()) {
++            QString qs = docelem.attribute("mpgfile");
++            if (!qs.isEmpty()) {
++              filenames.push_back((const char*)qs);
++            }
++          }
++          if (idxfilename.empty()) {
++            QString qs = docelem.attribute("idxfile");
++            if (!qs.isEmpty()) {
++              idxfilename = (const char*)qs;
++            }
++            if (expfilename.empty()) {
++              QString qs = docelem.attribute("expfile");
++              if (!qs.isEmpty())
++                expfilename = (const char*)qs;
++            }
++            // sanity check
++            if (filenames.empty()) {
++              critical("Failed to read project file - dvbcut",
++                  QString(filename) + ":\nNo MPEG filename given in project file");
++              fileOpenAction->setEnabled(true);
++              return;
++            }
++            prjfilename = filename;
++          }
++          else {
++            critical("Failed to read project file - dvbcut",
++                QString(filename) + ":\n" + errormsg);
++            fileOpenAction->setEnabled(true);
++            return;
++          }
+         }
+       }
+     }
+@@ -1849,34 +1858,38 @@
+   if (idxfilename.empty()) {
+     idxfilename = filename + ".idx";
+     if (!nogui) {
+-	  /*
+-	   * BEWARE! UGLY HACK BELOW!
+-	   *
+-	   * In order to circumvent the QFileDialog's stupid URL parsing,
+-	   * we need to first change to the directory and then pass the
+-	   * filename as a relative file: URL. Otherwise, filenames that
+-	   * contain ":" will not be handled correctly. --mr
+-	   */
+-	  QUrl u;
+-	  u.setProtocol(QString("file"));
+-	  u.setPath(QString(idxfilename));
+-	  if (chdir((const char*)u.dirPath()) == -1) chdir("/");
+-	  QString relname = QString("file:") + u.fileName();
+-	  QString s=QFileDialog::getSaveFileName(
+-		  relname,
+-		  settings().idxfilter,
+-		  this,
+-		  "Choose index file...",
+-		  "Choose the name of the index file" );
+-	  if (!s) {
+-		delete mpg;
+-		mpg=0;
+-		fileOpenAction->setEnabled(true);
+-		return;
+-	  }
+-	  idxfilename=(const char*)s;
+-	  // it's now a relative name that will be canonicalized again soon
+-	}
++      /*
++       * BEWARE! UGLY HACK BELOW!
++       *
++       * In order to circumvent the QFileDialog's stupid URL parsing,
++       * we need to first change to the directory and then pass the
++       * filename as a relative file: URL. Otherwise, filenames that
++       * contain ":" will not be handled correctly. --mr
++       */
++      QUrl u;
++      u.setProtocol(QString("file"));
++      u.setPath(QString(idxfilename));
++      if (chdir((const char*)u.dirPath()) == -1) {
++        if(chdir("/") == -1) {
++          critical("Directory wasn't found, and attempting to use / failed.", errormessage);
++        }
++      }
++      QString relname = QString("file:") + u.fileName();
++      QString s=QFileDialog::getSaveFileName(
++          relname,
++          settings().idxfilter,
++          this,
++          "Choose index file...",
++          "Choose the name of the index file" );
++      if (!s) {
++        delete mpg;
++        mpg=0;
++        fileOpenAction->setEnabled(true);
++        return;
++      }
++      idxfilename=(const char*)s;
++      // it's now a relative name that will be canonicalized again soon
++    }
+   }
+ 
+   make_canonical(idxfilename);
+@@ -1936,7 +1949,7 @@
+       delete mpg;
+       mpg=0;
+       critical("Error creating index - dvbcut",
+-	       QString("Cannot create index for\n")+filename+":\n"+errorstring);
++          QString("Cannot create index for\n")+filename+":\n"+errorstring);
+       fileOpenAction->setEnabled(true);
+       return;
+     } else if (!errorstring.empty()) {
+@@ -1948,7 +1961,7 @@
+     delete mpg;
+     mpg=0;
+     critical("Invalid MPEG file - dvbcut",
+-	     QString("The chosen file\n")+filename+"\ndoes not contain any video");
++        QString("The chosen file\n")+filename+"\ndoes not contain any video");
+     fileOpenAction->setEnabled(true);
+     return;
+   }
+@@ -2005,35 +2018,35 @@
+ 
+   if (!domdoc.isNull()) {
+     QDomElement e;
+-    for (QDomNode n=domdoc.documentElement().firstChild();!n.isNull();n=n.nextSibling())
++    for (QDomNode n=domdoc.documentElement().firstChild();!n.isNull();n=n.nextSibling()) {
+       if (!(e=n.toElement()).isNull()) {
+-      EventListItem::eventtype evt;
+-      if (e.tagName()=="start")
+-        evt=EventListItem::start;
+-      else if (e.tagName()=="stop")
+-        evt=EventListItem::stop;
+-      else if (e.tagName()=="chapter")
+-        evt=EventListItem::chapter;
+-      else if (e.tagName()=="bookmark")
+-        evt=EventListItem::bookmark;
+-      else
+-        continue;
+-      bool okay=false;
+-      int picnum;
+-      QString str=e.attribute("picture","-1");
+-      if (str.contains(':') || str.contains('.')) {
+-        okay=true;
+-        picnum=string2pts(str)/getTimePerFrame();
+-      }
+-      else
+-        picnum=str.toInt(&okay,0);
+-      if (okay && picnum>=0 && picnum<pictures) {
+-        new EventListItem(eventlist,imgp->getimage(picnum),evt,picnum,(*mpg)[picnum].getpicturetype(),(*mpg)[picnum].getpts()-firstpts);
+-        qApp->processEvents();
++        EventListItem::eventtype evt;
++        if (e.tagName()=="start")
++          evt=EventListItem::start;
++        else if (e.tagName()=="stop")
++          evt=EventListItem::stop;
++        else if (e.tagName()=="chapter")
++          evt=EventListItem::chapter;
++        else if (e.tagName()=="bookmark")
++          evt=EventListItem::bookmark;
++        else
++          continue;
++        bool okay=false;
++        int picnum;
++        QString str=e.attribute("picture","-1");
++        if (str.contains(':') || str.contains('.')) {
++          okay=true;
++          picnum=string2pts(str)/getTimePerFrame();
++        }
++        else
++          picnum=str.toInt(&okay,0);
++        if (okay && picnum>=0 && picnum<pictures) {
++          new EventListItem(eventlist,imgp->getimage(picnum),evt,picnum,(*mpg)[picnum].getpicturetype(),(*mpg)[picnum].getpts()-firstpts);
++          qApp->processEvents();
++        }
+       }
+     }
+   }
+-
+   update_quick_picture_lookup_table();
+ 
+   fileOpenAction->setEnabled(true);
+@@ -2169,14 +2182,14 @@
+     incr = settings().wheel_increments[incr];
+       if (incr != 0) {
+         bool save = fine;
+-	// use fine positioning if incr is small
++  // use fine positioning if incr is small
+         fine = (incr < 0 ? -incr : incr) < settings().wheel_threshold;
+-	// Note: delta is a multiple of 120 (see Qt documentation)
++  // Note: delta is a multiple of 120 (see Qt documentation)
+         int newpos = curpic - (delta * incr) / settings().wheel_delta;
+         if (newpos < 0)
+-	  newpos = 0;
+-	else if (newpos >= pictures)
+-	  newpos = pictures - 1;
++    newpos = 0;
++  else if (newpos >= pictures)
++    newpos = pictures - 1;
+         linslider->setValue(newpos);
+         fine = save;
+       }
+@@ -2286,9 +2299,9 @@
+   goinput->setText(QString::number(curpic));
+   goinput2->setText(QString::number(outpic));
+   
+-  int res=idx.getresolution();	// are found video resolutions stored in index?
+-  if (res) {	
+-    // new index with resolution bits set and lookup table at the end			  
++  int res=idx.getresolution(); // are found video resolutions stored in index?
++  if (res) {
++    // new index with resolution bits set and lookup table at the end
+     picinfolabel->setText(QString::number(mpg->getwidth(res)) + "x" 
+                         + QString::number(mpg->getheight(res)));
+   } else {
+@@ -2335,11 +2348,11 @@
+     const EventListItem &eli=*static_cast<const EventListItem*>(item);
+     switch (eli.geteventtype()) {
+       case EventListItem::start:
+-	if (startpic<0 || (start_bof && startpic==0 && !realzero)) {
++        if (startpic<0 || (start_bof && startpic==0 && !realzero)) {
+           startpic=eli.getpicture();
+           startpts=eli.getpts();
+           if (startpic==0)
+-	    realzero=true;        
++            realzero=true;        
+           // did we have a chapter in the eventlist directly before?
+           if(lastchapter==startpic)
+             chapterlist.push_back(outpts);
+@@ -2359,9 +2372,9 @@
+         break;
+       case EventListItem::chapter:
+         lastchapter=eli.getpicture();
+-	if (startpic>=0)
+-	  chapterlist.push_back(eli.getpts()-startpts+outpts);
+-	break;
++        if (startpic>=0)
++          chapterlist.push_back(eli.getpts()-startpts+outpts);
++        break;
+       default:
+         break;
+       }
+diff -ur dvbcut-svn179.orig/src/index.cpp dvbcut-svn179/src/index.cpp
+--- dvbcut-svn179.orig/src/index.cpp	2012-08-20 00:00:04.000000000 +1000
++++ dvbcut-svn179/src/index.cpp	2016-11-05 18:14:00.488888856 +1100
+@@ -308,7 +308,7 @@
+ 	    pts_t ptsdelta = pts - p[lastiframe].getpts();
+ 	    int pdelta = pictures - lastiframe + seqnr - p[lastiframe].getsequencenumber();
+ 	    if (pdelta * framepts < ptsdelta)
+-	      fprintf(stderr, "missing frames in GOP (%d, %d): %lld\n",
++	      fprintf(stderr, "missing frames in GOP (%d, %d): %ld\n",
+ 		lastiframe, pictures, ptsdelta / framepts - pdelta);
+ 	    }
+ 	  lastiframe = pictures;
+diff -ur dvbcut-svn179.orig/src/lavfmuxer.cpp dvbcut-svn179/src/lavfmuxer.cpp
+--- dvbcut-svn179.orig/src/lavfmuxer.cpp	2016-11-05 19:09:50.374119795 +1100
++++ dvbcut-svn179/src/lavfmuxer.cpp	2016-11-05 18:14:00.497888699 +1100
+@@ -48,6 +48,7 @@
+ //  maybe: AVFormatContext::audio_preload but no direct access.
+ //    AVOptions
+ //    iformat
++fprintf(stderr,"  lavfmuxer: need code: mux_rate\n");
+ #else
+   avfc->preload= (int)(.5*AV_TIME_BASE);
+   avfc->mux_rate=10080000;
+@@ -67,7 +68,8 @@
+   mpg.setvideoencodingparameters();
+   s->codec=mpg.getavcc(VIDEOSTREAM);
+   s->codec->rc_buffer_size = 224*1024*8;
+-#if LIBAVFORMAT_VERSION_INT >= ((52<<16)+(21<<8)+0)
++#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 21, 0)
++fprintf(stderr,"  lavfmuxer: b4 sample_aspect_ratio\n");
+   s->sample_aspect_ratio = s->codec->sample_aspect_ratio;
+ #endif
+ 
+@@ -81,24 +83,37 @@
+       if (s->codec)
+         av_free(s->codec);
+ #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 35, 0)
+-// todo: what here ?
+-//  maybe need non NULL passed
+-// AVCodecContext* avcodec_alloc_context3 	( 	const AVCodec *  	codec 	 )  	
+-      s->codec = avcodec_alloc_context3(NULL);
+-
+-// attribute_deprecated void avcodec_get_context_defaults 	( 	AVCodecContext *  	s 	 ) 
+-      avcodec_get_context_defaults3(s->codec, NULL);
+-        
++/*
++AVCodecContext* avcodec_alloc_context (void) 
++Deprecated: use avcodec_alloc_context3():
++AVCodecContext* avcodec_alloc_context3(const AVCodec * codec)  	
++*/
++fprintf(stderr,"  lavfmuxer: b4 avcodec_alloc_context3\n");
++      AVCodec* avcodec = avcodec_find_decoder(AV_CODEC_ID_AC3);
++      s->codec = avcodec_alloc_context3(avcodec);
++/*
++void avcodec_get_context_defaults(AVCodecContext * s)
++Deprecated: use avcodec_get_context_defaults3:
++int  avcodec_get_context_defaults3(AVCodecContext * s, const AVCodec * codec) 	
++*/
++fprintf(stderr,"  lavfmuxer: b4 avcodec_get_context_defaults3\n");
++      int getContext_result = avcodec_get_context_defaults3(s->codec, avcodec);
++      if(getContext_result <= 10) { // todo just testing this works
++        fprintf(stderr, "  avcodec_get_context_defaults3 returned=%d\n", getContext_result);
++      }
+ #else
++fprintf(stderr,"  lavfmuxer: b4 avcodec_get_context_defaults3.alt\n");
+       s->codec = avcodec_alloc_context();
+       avcodec_get_context_defaults(s->codec);
+ #endif
+-      s->codec->codec_type=AVMEDIA_TYPE_AUDIO;
++      s->codec->codec_type = AVMEDIA_TYPE_AUDIO;
+       s->codec->codec_id = (mpg.getstreamtype(astr)==streamtype::ac3audio) ?
+-	CODEC_ID_AC3 : CODEC_ID_MP2;
++          AV_CODEC_ID_AC3 : AV_CODEC_ID_MP2;
++fprintf(stderr,"  lavfmuxer: b4 rc_buffer_size\n");
+       s->codec->rc_buffer_size = 224*1024*8;
+ 
+       // Must read some packets to get codec parameters
++fprintf(stderr,"  lavfmuxer: b4 newstream\n");
+       streamhandle sh(mpg.getinitialoffset());
+       streamdata *sd=sh.newstream(astr,mpg.getstreamtype(astr),mpg.istransportstream());
+ 
+@@ -107,46 +122,70 @@
+ 	  break;
+ 
+ 	if (sd->getitemlistsize() > 1) {
+-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 35, 0)
+-// todo:
+-//int avcodec_open2 	( 	AVCodecContext *  	avctx,
+-//		const AVCodec *  	codec,
+-//		AVDictionary **  	options	 
+-//	) 	
+-	  if (!avcodec_open2(s->codec,
+-			    avcodec_find_decoder(s->codec->codec_id), NULL)) {
++#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 8, 0)
++/*
++int avcodec_open (AVCodecContext * avctx, AVCodec * codec)
++Deprecated: use avcodec_open2(): doxygen/0.7/
++int avcodec_open2(AVCodecContext * avctx, const AVCodec * codec, AVDictionary ** options) 	
++*/
++fprintf(stderr,"  lavfmuxer: b4 codec_options\n");
++          AVDictionary *codec_options = NULL;
++	  if (avcodec_open2(s->codec,
++			    avcodec_find_decoder(s->codec->codec_id), &codec_options) == 0) {
+ #else
+ 	  if (!avcodec_open(s->codec,
+ 			    avcodec_find_decoder(s->codec->codec_id))) {
+ #endif
+ 
+-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 18, 0)
+-// todo:
+-// FF_API_OLD_DECODE_AUDIO is not defined, so need to work out how to
+-// calc frame_size, or if decode_audio3 needs it
+-// used to be AVCODEC_MAX_AUDIO_FRAME_SIZE = 192000
+-// trying that
+-	    int16_t samples[192000/sizeof(int16_t)];
++#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 40, 0)
++/*
++AVCODEC_MAX_AUDIO_FRAME_SIZE is deprecated.
++*/
++#define MAX_AUDIO_FRAME_SIZE 192000 // 1 second of 48khz 32bit audio
++	    int16_t samples[MAX_AUDIO_FRAME_SIZE/sizeof(int16_t)];
+ #else
+ 	    int16_t samples[AVCODEC_MAX_AUDIO_FRAME_SIZE/sizeof(int16_t)];
+ #endif
++fprintf(stderr,"  lavfmuxer: b4 frame_size\n");
+ 	    int frame_size=sizeof(samples);
+ 	    //fprintf(stderr, "** decode audio size=%d\n", sd->inbytes());
+ 
+-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 35, 0)
++/*
++int avcodec_decode_audio (AVCodecContext * avctx, int16_t * samples,
++                         int * frame_size_ptr, uint8_t * buf, int buf_size);
++Deprecated: Use avcodec_decode_audio2() instead.
++int avcodec_decode_audio2(AVCodecContext * avctx, int16_t * samples,
++                         int * frame_size_ptr, uint8_t * buf, int buf_size);
++Deprecated: Use avcodec_decode_audio3() instead.
++int avcodec_decode_audio3(AVCodecContext * avctx, int16_t * samples,
++                         int * frame_size_ptr, AVPacket * avpkt) 	
++Deprecated: Use avcodec_decode_audio4 instead.
++int avcodec_decode_audio4 (AVCodecContext *avctx, AVFrame *frame,
++                         int * got_frame_ptr, const AVPacket * avpkt)
++Deprecated:
++    Use avcodec_send_packet() and avcodec_receive_frame():
++int avcodec_send_packet(AVCodecContext * avctx, const AVPacket * avpkt)
++int avcodec_receive_frame(AVCodecContext * avctx, AVFrame * frame) 	
++*/
++#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 25, 0)
+             AVPacket avpkt;
++fprintf(stderr,"  lavfmuxer: b4 av_init_packet\n");
+             av_init_packet(&avpkt);
+             avpkt.data = (uint8_t*)sd->getdata();
+             avpkt.size = sd->inbytes();
+             // HACK for CorePNG to decode as normal PNG by default
+             avpkt.flags = AV_PKT_FLAG_KEY;
+-            avcodec_decode_audio3(s->codec,samples,&frame_size, &avpkt);
+-#elif LIBAVCODEC_VERSION_INT >= ((52<<16)+(0<<8)+0)
+-	    avcodec_decode_audio2(s->codec,samples,&frame_size,
+-	                          (uint8_t*) sd->getdata(),sd->inbytes());
++            AVFrame * decoded_frame;
++            int got_frame_ptr;
++fprintf(stderr,"  lavfmuxer: b4 avcodec_decode_audio4\n");
++            avcodec_decode_audio4(s->codec, decoded_frame, &got_frame_ptr, &avpkt);
++//            avcodec_decode_audio3(s->codec, samples, &frame_size, &avpkt);
++#elif LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(52, 23, 0)
++	    avcodec_decode_audio2(s->codec, samples, &frame_size,
++	                          (uint8_t*) sd->getdata(), sd->inbytes());
+ #else
+-	    avcodec_decode_audio(s->codec,samples,&frame_size,
+-	                         (uint8_t*) sd->getdata(),sd->inbytes());
++	    avcodec_decode_audio(s->codec, samples, &frame_size,
++	                         (uint8_t*) sd->getdata(), sd->inbytes());
+ #endif
+ 	    avcodec_close(s->codec);
+ 	  }
+@@ -157,6 +196,7 @@
+ 
+ #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 35, 0)
+   // error: 'av_set_parameters' was not declared in this scope
++fprintf(stderr,"  lavfmuxer: b4 avio_open\n");
+   if (!(fmt->flags & AVFMT_NOFILE)&&(avio_open(&avfc->pb, filename, AVIO_FLAG_WRITE) < 0)) {
+ #else
+   if ((av_set_parameters(avfc, NULL) < 0) || (!(fmt->flags & AVFMT_NOFILE)&&(url_fopen(&avfc->pb, filename, URL_WRONLY) < 0))) {
+@@ -170,6 +210,7 @@
+ //  maybe: AVFormatContext::audio_preload but no direct access.
+ //    AVOptions
+ //    iformat
++fprintf(stderr,"  lavfmuxer: needcode: mux_rate\n");
+ #else
+   avfc->preload= (int)(.5*AV_TIME_BASE);
+   avfc->mux_rate=10080000;
+@@ -177,9 +218,12 @@
+   avfc->max_delay= (int)(.7*AV_TIME_BASE);
+ 
+ #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 35, 0)
++fprintf(stderr,"  lavfmuxer: b4: av_dump_format\n");
+   av_dump_format(avfc, 0, filename, 1);
+   fileopened=true;
++fprintf(stderr,"  lavfmuxer: b4: avformat_write_header\n");
+   avformat_write_header(avfc, NULL);
++fprintf(stderr,"  lavfmuxer: after: avformat_write_header\n");
+ #else
+   dump_format(avfc, 0, filename, 1);
+   fileopened=true;
+@@ -196,7 +240,7 @@
+       if (!(fmt->flags & AVFMT_NOFILE))
+ #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 35, 0)
+         avio_close(avfc->pb);
+-#elif LIBAVFORMAT_VERSION_INT >= ((52<<16)+(0<<8)+0)
++#elif LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 0, 0)
+         url_fclose(avfc->pb);
+ #else
+         url_fclose(&avfc->pb);
+diff -ur dvbcut-svn179.orig/src/main.cpp dvbcut-svn179/src/main.cpp
+--- dvbcut-svn179.orig/src/main.cpp	2012-08-20 00:00:04.000000000 +1000
++++ dvbcut-svn179/src/main.cpp	2016-11-05 18:14:00.488888856 +1100
+@@ -54,7 +54,7 @@
+ void
+ usage_exit(int rv=1) {
+   fprintf(stderr,
+-    "Usage ("VERSION_STRING"):\n"
++    " Usage (" VERSION_STRING"):\n"
+     "  %s -generateidx [-idx <idxfilename>] [<mpgfilename> ...]\n"
+     "  %s -batch [ OPTIONS ] <prjfilename> | <mpgfilename> ...\n\n"
+     "OPTIONS: -cut 4:3|16:9|TS|TS2|<list>, -exp <expfilename>,\n"
+diff -ur dvbcut-svn179.orig/src/mpegmuxer.cpp dvbcut-svn179/src/mpegmuxer.cpp
+--- dvbcut-svn179.orig/src/mpegmuxer.cpp	2012-08-20 00:00:04.000000000 +1000
++++ dvbcut-svn179/src/mpegmuxer.cpp	2016-11-05 18:14:00.489888838 +1100
+@@ -640,8 +640,8 @@
+       }
+ 
+     if (len) {
+-      fprintf(stderr,"str=%d len=%d aulist.size=%d packlist.size=%d\n",
+-	str,len,s->aulist.size(),s->packlist.size());
++      fprintf(stderr,"str=%d len=%d aulist.size=%lu packlist.size=%lu\n",
++          str, len, s->aulist.size(), s->packlist.size());
+       assert(len==0);
+       }
+     }
+Only in dvbcut-svn179/src: mpegmuxer.cpp.c11
+Only in dvbcut-svn179/src: mpegmuxer.o
+diff -ur dvbcut-svn179.orig/src/mpgfile.cpp dvbcut-svn179/src/mpgfile.cpp
+--- dvbcut-svn179.orig/src/mpgfile.cpp	2016-11-05 19:09:50.373119813 +1100
++++ dvbcut-svn179/src/mpgfile.cpp	2016-11-05 18:14:00.491888803 +1100
+@@ -259,9 +259,9 @@
+     S->id=vid;
+     S->allocavcc();
+     S->avcc->codec_type=AVMEDIA_TYPE_VIDEO;
+-    S->avcc->codec_id=CODEC_ID_MPEG2VIDEO;
+-    S->dec=avcodec_find_decoder(CODEC_ID_MPEG2VIDEO);
+-    S->enc=avcodec_find_encoder(CODEC_ID_MPEG2VIDEO);
++    S->avcc->codec_id=AV_CODEC_ID_MPEG2VIDEO;
++    S->dec=avcodec_find_decoder(AV_CODEC_ID_MPEG2VIDEO);
++    S->enc=avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
+     S->type=streamtype::mpeg2video;
+     }
+ 
+@@ -629,7 +629,7 @@
+           {
+ 
+             for(it=sd->itemlist().begin();it!=sd->itemlist().end();++it)
+-              fprintf(stderr," fileposition:%lld/%d bufferposition:%d flags:%x pts:%s\n",
++              fprintf(stderr," fileposition:%ld/%d bufferposition:%d flags:%x pts:%s\n",
+                       it->fileposition.packetposition(),it->fileposition.packetoffset(),
+                       it->bufferposition,it->flags,ptsstring(it->pts).c_str());
+ 
+@@ -638,7 +638,7 @@
+ 
+             for(int i=0;i<MAXAVSTREAMS;++i)
+               if (sh.stream[i])
+-                fprintf(stderr,"stream %d%s, itemlist.size():%d\n",
++                fprintf(stderr,"stream %d%s, itemlist.size():%lu\n",
+                         i,(sh.stream[i]==sd)?"*":"",sh.stream[i]->itemlist().size());
+ 
+             abort();
+@@ -725,6 +725,11 @@
+   {
+     u_int8_t *buf=(u_int8_t*)m2v.writeptr();
+     int out;
++    int got_packet;
++    AVPacket avpkt;
++    av_init_packet(&avpkt);
++    avpkt.data = NULL;
++    avpkt.size = 0;
+ 
+     if (!framelist.empty())
+     {
+@@ -733,13 +738,27 @@
+       f->pts=idx[idx.indexnr(start+p)].getpts()-startpts;
+       f->coded_picture_number=f->display_picture_number=p;
+       f->key_frame=(p==0)?1:0;
+-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 35, 0)      
++#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 24, 0)
+       f->pict_type=(p==0)?AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_P;
++/*
++int  avcodec_encode_video(AVCodecContext *avctx, uint8_t *buf, int buf_size
++        , const AVFrame *pict) 
++use avcodec_encode_video2() instead:
++int avcodec_encode_video2(AVCodecContext *avctx, AVPacket *avpkt
++        , const AVFrame *frame, int *got_packet_ptr) 	
++                                      &f ?
++*/
++      out = avcodec_encode_video2(avcc, &avpkt, f, &got_packet);
++// was: out = avcodec_encode_video2(avcc, buf, m2v.getsize(), f);
+ #else
++  #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(50, 0, 0)      
++      f->pict_type=(p==0)?AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_P;
++  #else
+       f->pict_type=(p==0)?FF_I_TYPE:FF_P_TYPE;
+-#endif
++  #endif
+       out = avcodec_encode_video(avcc, buf,
+                                  m2v.getsize(), f);
++#endif
+ 
+       delete framelist.front();
+       framelist.pop_front();
+@@ -751,8 +770,11 @@
+     else
+     {
+       fprintf(stderr,"trying to call avcodec_encode_video with frame=0\n");
+-      out = avcodec_encode_video(avcc, buf,
+-                                 m2v.getsize(), 0);
++/*
++
++*/
++      out = avcodec_encode_video2(avcc, &avpkt, 0, &got_packet);
++// was: out = avcodec_encode_video(avcc, buf, m2v.getsize(), 0);
+       fprintf(stderr,"...back I am.\n");
+ 
+       if (out<=0)
+@@ -763,8 +785,18 @@
+     pts_t viddts=mux.getdts(VIDEOSTREAM);
+     mux.setdts(VIDEOSTREAM,vidpts);
+     fixtimecode(buf,out,vidpts);
++/* 
++AVCodecContext::coded_frame
++use the quality factor packet side data instead.
++*/
++    int sidedata_key_frame = 0;
++    //if (avpkt.flags & AV_PKT_FLAG_KEY)
++    sidedata_key_frame = avpkt.flags & AV_PKT_FLAG_KEY; 
++    fprintf(stderr, "sidedata_key_frame=%hhu\n", sidedata_key_frame);
+     mux.putpacket(VIDEOSTREAM,buf,out,vidpts,viddts,
+-                  (avcc->coded_frame && avcc->coded_frame->key_frame)?MUXER_FLAG_KEY:0 );
++                  (sidedata_key_frame)?MUXER_FLAG_KEY:0 );
++//  orig: mux.putpacket(VIDEOSTREAM,buf,out,vidpts,viddts,
++//                (avcc->coded_frame && avcc->coded_frame->key_frame)?MUXER_FLAG_KEY:0 );
+     ++outpicture;
+ 
+     if (log && savepics>0)
+diff -ur dvbcut-svn179.orig/src/stream.h dvbcut-svn179/src/stream.h
+--- dvbcut-svn179.orig/src/stream.h	2016-11-05 19:09:50.373119813 +1100
++++ dvbcut-svn179/src/stream.h	2016-11-05 18:14:00.479889014 +1100
+@@ -68,11 +68,31 @@
+     avcc->rc_min_rate=9500000;
+     avcc->rc_max_rate=9500000;
+     avcc->rc_buffer_size=224*1024*8;
+-    avcc->rc_buffer_aggressivity=1.0;
++/* ffmpeg info:
++https://libav.org/documentation/doxygen/master/structAVCodecContext.html
++attribute_deprecated float AVCodecContext::rc_buffer_aggressivity
++
++Deprecated:
++    use encoder private options instead
++  Also:
++http://video.stackexchange.com/questions/18371/avconv-what-are-the-mpegvideo-private-options
++.. "rc_buf_aggressivity", "currently useless", 
++*/
++// assume default is OK, comment out.
++//    avcc->rc_buffer_aggressivity=1.0;
+     avcc->rc_initial_buffer_occupancy = avcc->rc_buffer_size*3/4;
+     avcc->qmax=2;
+     avcc->mb_lmax= FF_QP2LAMBDA * 2;
+-    avcc->lmax= FF_QP2LAMBDA * 2;
++/* ffmpeg info:
++https://libav.org/documentation/doxygen/master/structAVCodecContext.html
++attribute_deprecated int AVCodecContext::lmax
++
++Deprecated:
++    use encoder private options instead
++.. "lmax", "maximum Lagrange factor (VBR)", 
++*/
++// assume default is OK, so just comment out.
++//    avcc->lmax= FF_QP2LAMBDA * 2;
+     if (interlaced)
+       avcc->flags |= CODEC_FLAG_INTERLACED_DCT|CODEC_FLAG_INTERLACED_ME;
+     }
+diff -ur dvbcut-svn179.orig/src/tsfile.cpp dvbcut-svn179/src/tsfile.cpp
+--- dvbcut-svn179.orig/src/tsfile.cpp	2012-08-20 00:00:04.000000000 +1000
++++ dvbcut-svn179/src/tsfile.cpp	2016-11-05 18:14:00.490888821 +1100
+@@ -137,7 +137,8 @@
+       int pd=buf.providedata(packetsize,packetpos);
+       if (pd<0)
+         return pd;
+-      if (pd<packetsize)
++      // int <  unsigned int
++      if (static_cast<unsigned int>(pd) < packetsize)
+         return returnvalue;
+       }
+ 
+@@ -349,7 +350,7 @@
+               && bnum<TF5XXXPVR_MAX) {
+           // bookmark is stored in 128 resp. 94kbyte units
+           bookmark*=unit;
+-          if(verbose) fprintf(stderr,"BOOKMARK[%d] = %lld\n",bnum,bookmark);
++          if(verbose) fprintf(stderr,"BOOKMARK[%d] = %ld\n",bnum,bookmark);
+           // fill bookmark vector with byte positions
+           byte_bookmarks.push_back(bookmark);
+           bnum++;
+@@ -403,7 +404,7 @@
+       // changed byte order compared to old receivers!?!
+       while ((bookmark=(buffer[boff+3]<<24)|(buffer[boff+2]<<16)|(buffer[boff+1]<<8)|buffer[boff])
+               && bnum<TF7700HDPVR_MAX) {
+-          if(verbose) fprintf(stderr,"BOOKMARK[%d] = %lld\n",bnum,bookmark);
++          if(verbose) fprintf(stderr,"BOOKMARK[%d] = %ld\n",bnum,bookmark);
+           // bookmark is stored in seconds now, but we'll use full pts!
+           bookmark*=unit;
+           // fill bookmark vector with times
+@@ -412,7 +413,7 @@
+           boff+=4;
+       }  
+   } else // receiver model identified but file to short!
+-      fprintf(stderr,"ADD-File probabely corrupted (%dbytes to short), discarding bookmarks!\n",TF7700HDPVR_LEN-len);
++      fprintf(stderr,"ADD-File probably corrupted (%ld bytes too short), discarding bookmarks!\n",TF7700HDPVR_LEN-len);
+ 
+   // terminate
+   free(buffer);
