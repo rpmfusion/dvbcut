@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Service
+X-KDE-Priority=TopLevel
+X-KDE-ServiceTypes=KonqPopupMenu/Plugin,video/mpg
+Name=dvbcut mpeg2 tools
+Comment=dvbcut editor menu
+Icon=dvbcut
+Actions=dvbcutOpenMpegStream;
+Name[en_US]=dvbcut-servicemenu
+
+[Desktop Action dvbcutOpenMpegStream]
+Type=Application
+Name=Open mpeg stream in dvbcut
+Exec=dvbcut "%f"
+Icon=dvbcut

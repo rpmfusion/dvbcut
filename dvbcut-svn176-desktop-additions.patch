@@ -1,0 +1,21 @@
+--- dvbcut.desktop.in.orig	2011-04-25 11:27:29.000000000 +1000
++++ dvbcut.desktop.in	2011-04-26 11:37:42.022156749 +1000
+@@ -2,13 +2,14 @@
+ Type=Application
+ Version=1.0
+ Name=DVBcut
+-GenericName=DVB Cutting Program
++GenericName=DVB Cutting Program for MPEG Transport Stream files
+ NoDisplay=false
+-Comment=Cut DVB streams
++Comment=Trim and cut video MPEG2 transport streams into multiple export formats
+ Icon=@prefix@/share/dvbcut/icons/dvbcut.svg
+ TryExec=@prefix@/bin/dvbcut
+ Exec=@prefix@/bin/dvbcut %F
+ Terminal=false
+-MimeType=application/x-dvbcut;
+-Categories=AudioVideo;AudioVideoEditing;Qt;
++MimeType=application/x-dvbcut;video/mpeg;
++Categories=AudioVideo;Player;AudioVideoEditing;Qt;
+ StartupWMClass=Dvbcut
++#nautilus /usr/share/applications, and refresh F5 to see changes to this file.
