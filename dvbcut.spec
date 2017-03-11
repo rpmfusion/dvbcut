@@ -1,13 +1,8 @@
 %define svnrev 179
-%if 0%{?fedora} > 6 || 0%{?rhel} > 5
-  %define qt3 qt3
-%else
-  %define qt3 qt
-%endif
 
 Name:    dvbcut
 Version: 0.6.1
-Release: 19.svn%{svnrev}%{?dist}
+Release: 20.svn%{svnrev}%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -34,9 +29,8 @@ Patch8:  %{name}-svn179-ffmpeg-2.0-compatibility.patch
 Patch9:  %{name}-svn179-ffmpeg-2.4.3-compatibility.patch
 Patch10: %{name}-svn179-ffmpeg-3.0.3-compatibility.patch
 
-BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: autoconf
-BuildRequires: %{qt3}-devel
+BuildRequires: qt3-devel
 BuildRequires: libao-devel 
 BuildRequires: a52dec-devel 
 BuildRequires: libmad-devel
@@ -83,6 +77,9 @@ sed -i 's,$(STRIP) $(topdir)/bin/dvbcut$(EXEEXT),,' src/Makefile.in
 sed -i '/debian/d' DISTFILES
 sed -i '/ffmpeg.src/d' DISTFILES
 
+# fix desktop file
+sed -i -e 's|@prefix@/share/dvbcut/icons/dvbcut.svg|dvbcut|g' dvbcut.desktop.in
+
 
 %build
 unset QTDIR || : ; . /etc/profile.d/qt.sh
@@ -96,7 +93,7 @@ make
 
 
 %install
-make DESTDIR=%{buildroot} install
+%make_install
 
 mkdir -p %{buildroot}%{_datadir}/applications
 desktop-file-install --vendor="" \
@@ -106,31 +103,23 @@ mkdir -p %{buildroot}%{_kde4_datadir}/kde4/services/
 cp %{SOURCE6} %{buildroot}%{_kde4_datadir}/kde4/services/
 
 
-%clean
-rm -rf %{buildroot}
-
-
 %post
-touch --no-create %{_datadir}/icons/hicolor || :
-if [ -x %{_bindir}/gtk-update-icon-cache ]; then
-  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
-fi
-
-update-desktop-database &> /dev/null || :
-
+/usr/bin/update-desktop-database &> /dev/null || :
+/bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
 
 %postun
-touch --no-create %{_datadir}/icons/hicolor || :
-if [ -x %{_bindir}/gtk-update-icon-cache ]; then
-  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
+/usr/bin/update-desktop-database &> /dev/null || :
+if [ $1 -eq 0 ] ; then
+    /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null
+    /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 fi
 
-update-desktop-database &> /dev/null || :
-
+%posttrans
+/usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 
 %files
-%defattr(-,root,root,-)
-%doc ChangeLog COPYING CREDITS README README.icons
+%doc ChangeLog CREDITS README README.icons
+%license COPYING
 %{_bindir}/%{name}
 %{_mandir}/man1/%{name}.1.gz
 %{_datadir}/applications/*.desktop
@@ -141,6 +130,12 @@ update-desktop-database &> /dev/null || :
 
 
 %changelog
+* Sat Mar 11 2017 Leigh Scott <leigh123linux@googlemail.com> - 0.6.1-20.svn179
+- fix missing icon (rfbz#3638)
+- fix scriplets
+- remove useless define
+- clean up spec file
+
 * Sat Nov  5 2016 David Timms <iinet.net.au at dtimms> - 0.6.1-19.svn179
 - rebuild for ffmpeg-3.0.3
 - add combined patch covering:
