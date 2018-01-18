@@ -28,6 +28,7 @@ Patch7:  %{name}-svn179-ffmpeg-0.11.1.patch
 Patch8:  %{name}-svn179-ffmpeg-2.0-compatibility.patch
 Patch9:  %{name}-svn179-ffmpeg-2.4.3-compatibility.patch
 Patch10: %{name}-svn179-ffmpeg-3.0.3-compatibility.patch
+Patch11: ffmpeg35_buildfix.patch
 
 BuildRequires: autoconf
 BuildRequires: qt3-devel
@@ -66,6 +67,7 @@ dvbcut can use Mplayer if available.
 %patch8 -b .ffmpeg-2.0
 %patch9 -p1 -b .ffmpeg-2.4.3
 %patch10 -p1 -b .ffmpeg-3.0.3
+%patch11 -p1 -b .ffmpeg35
 
 # Fix QTDIR libs in configure
 sed -i 's,$QTDIR/$mr_libdirname,$QTDIR/lib,' configure.in
