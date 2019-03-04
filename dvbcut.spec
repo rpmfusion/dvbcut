@@ -31,7 +31,7 @@ Patch10: %{name}-svn179-ffmpeg-3.0.3-compatibility.patch
 Patch11: ffmpeg35_buildfix.patch
 
 BuildRequires: autoconf
-BuildRequires: gcc
+BuildRequires: gcc-c++
 BuildRequires: qt3-devel
 BuildRequires: libao-devel 
 BuildRequires: a52dec-devel 
