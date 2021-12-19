@@ -1,124 +1,89 @@
 %define svnrev 179
 
 Name:    dvbcut
-Version: 0.6.1
-Release: 37.svn%{svnrev}%{?dist}
+Version: 0.7.3
+Release: 1%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
 License: GPLv2+ and LGPLv2
-URL:     http://dvbcut.sourceforge.net/
-#  fixes were committed to svn since release, so using svn checkout for latest fixes:
-# original upstream archive location:
-#Source0: http://downloads.sourceforge.net/dvbcut/dvbcut_% {version}.tar.bz2
 # current upstream release location:
-#Source0: http://www.mr511.de/dvbcut/dvbcut-0.6.1.tar.gz
+URL:     https://github.com/bernhardu/dvbcut-deb
 #     use sh dvbcut-snapshot.sh to create the archive
-Source0: %{name}-svn%{svnrev}.tar.bz2
-# This desktop file was created by hand.
-Source5: %{name}-snapshot.sh
-Source6: %{name}-servicemenu.desktop
-# helpfile is placed in /usr/share/help. Look for it under /usr/share/dvbcut instead
-Patch0:  %{name}-fix-help-path.patch
-Patch1:  %{name}-svn176-fix-make-install.patch
-Patch2:  %{name}-svn176-fix-help-install-path.patch
-Patch3:  %{name}-svn176-desktop-additions.patch
-Patch6:  %{name}-179-vs-ubuntu-12.04.diff
-Patch7:  %{name}-svn179-ffmpeg-0.11.1.patch
-Patch8:  %{name}-svn179-ffmpeg-2.0-compatibility.patch
-Patch9:  %{name}-svn179-ffmpeg-2.4.3-compatibility.patch
-Patch10: %{name}-svn179-ffmpeg-3.0.3-compatibility.patch
-Patch11: ffmpeg35_buildfix.patch
+Source0: https://github.com/bernhardu/dvbcut-deb/archive/v%{version}/%{name}-%{version}.tar.gz
+# PATCH-FIX-OPENSUSE dvbcut-use_pkgconfig.patch aloisio@gmx.com -- use pkgconfig for ffmpeg libraries
+Patch1:         dvbcut-use_pkgconfig.patch
+# PATCH-FIX-OPENSUSE dvbcut-appicon-patch aloisio@gmx.com -- install icon in the proper path
+Patch3:         dvbcut-appicon.patch
+# PATCH-FIX-OPENSUSE dvbcut-locale.patch aloisio@gmx.com -- also install .qm locale files
+Patch4:         dvbcut-locale.patch
 
 BuildRequires: autoconf
+BuildRequires: libtool
 BuildRequires: gcc-c++
-BuildRequires: qt3-devel
-BuildRequires: libao-devel 
-BuildRequires: a52dec-devel 
+BuildRequires: libao-devel
+BuildRequires: a52dec-devel
+BuildRequires: hicolor-icon-theme
+BuildRequires: qt5-linguist
+BuildRequires: pkgconfig
+BuildRequires: pkgconfig(Qt5Core)
+BuildRequires: pkgconfig(Qt5Gui)
+BuildRequires: pkgconfig(Qt5Widgets)
+BuildRequires: pkgconfig(Qt5Xml)
+BuildRequires: pkgconfig(ao)
 BuildRequires: libmad-devel
 BuildRequires: ffmpeg-devel
 BuildRequires: desktop-file-utils
-BuildRequires: kde-filesystem
 Requires: hicolor-icon-theme
 # mplayer not actually required, but much better with it.
 Requires: mplayer
-Requires: kde-filesystem  
+
 
 %description
-dvbcut is a Qt application that allows you to select certain parts of an MPEG
+DVBcut is a Qt application that allows you to select certain parts of an MPEG
 transport stream (as received via Digital Video Broadcasting, DVB) and save
 these parts into a single MPEG output file. It follows a "keyhole surgery"
 approach where the input video and audio data is mostly kept unchanged, and
-only very few frames at the beginning and/or end of the selected range are 
+only very few frames at the beginning and/or end of the selected range are
 re-encoded in order to obtain a valid MPEG file. For MPEG video playback
 dvbcut can use Mplayer if available.
 
 
 %prep
-# for release archive
-#%#setup -q
-# for svn tag
-%setup -q -n %{name}-svn%{svnrev}
-%patch0 -b .fix-help-path
-%patch1 -b .fix-make-install
-%patch2 -b .fix-help-install
-%patch3 -b .desktop-improvements
-%patch6 -b .ubuntu
-%patch7 -p1 -b .ffmpeg-0.11.1
-%patch8 -b .ffmpeg-2.0
-%patch9 -p1 -b .ffmpeg-2.4.3
-%patch10 -p1 -b .ffmpeg-3.0.3
-%patch11 -p1 -b .ffmpeg35
-
-# Fix QTDIR libs in configure
-sed -i 's,$QTDIR/$mr_libdirname,$QTDIR/lib,' configure.in
-
-# Avoid stripping binaries
-sed -i 's,$(STRIP) $(topdir)/bin/dvbcut$(EXEEXT),,' src/Makefile.in
-
-# don't try to make Debian and ffmpeg files that have been stripped
-sed -i '/debian/d' DISTFILES
-sed -i '/ffmpeg.src/d' DISTFILES
-
-# fix desktop file
-sed -i -e 's|@prefix@/share/dvbcut/icons/dvbcut.svg|dvbcut|g' dvbcut.desktop.in
+%setup -q -n %{name}-deb-%{version}
+%patch1 -p1
+%patch3 -p1
+%patch4 -p1
 
 
 %build
-unset QTDIR || : ; . /etc/profile.d/qt.sh
-autoconf
-%configure --with-ffmpeg=%{_prefix} \
-    --with-ffmpeg-include=%{_includedir}/ffmpeg
-    helpdir=%{_datadir}/%{name}
-    
-# It does not compile with smp_mflags
-make
+autoreconf -i
+%configure
+
+%make_build
 
 
 %install
 %make_install
 
-mkdir -p %{buildroot}%{_datadir}/applications
-desktop-file-install --vendor="" \
-    --dir %{buildroot}%{_datadir}/applications dvbcut.desktop
-
-mkdir -p %{buildroot}%{_kde4_datadir}/kde4/services/ 
-cp %{SOURCE6} %{buildroot}%{_kde4_datadir}/kde4/services/
-
 
 %post
-/usr/bin/update-desktop-database &> /dev/null || :
-/bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
-
-%postun
-/usr/bin/update-desktop-database &> /dev/null || :
-if [ $1 -eq 0 ] ; then
-    /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null
-    /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
+touch --no-create %{_datadir}/icons/hicolor || :
+if [ -x %{_bindir}/gtk-update-icon-cache ]; then
+  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
 fi
 
-%posttrans
-/usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
+update-desktop-database &> /dev/null || :
+
+
+%postun
+touch --no-create %{_datadir}/icons/hicolor || :
+if [ -x %{_bindir}/gtk-update-icon-cache ]; then
+  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
+fi
+
+update-desktop-database &> /dev/null || :
+
 
 %files
 %doc ChangeLog CREDITS README README.icons
@@ -127,12 +92,14 @@ fi
 %{_mandir}/man1/%{name}.1.gz
 %{_datadir}/applications/*.desktop
 %{_datadir}/icons/hicolor/scalable/apps/%{name}.svg
-%{_datadir}/%{name}/dvbcut_*.html
-%{_kde4_datadir}/kde4/services/*.desktop
+%{_datadir}/%{name}
 %{_datadir}/mime/packages/dvbcut.xml
 
 
 %changelog
+* Sun Dec 19 2021 Sérgio Basto <sergio@serjux.com> - 0.7.3-1
+- Update to 0.7.3
+
 * Thu Nov 11 2021 Leigh Scott <leigh123linux@gmail.com> - 0.6.1-37.svn179
 - Rebuilt for new ffmpeg snapshot
 
