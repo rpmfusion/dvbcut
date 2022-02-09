@@ -2,7 +2,7 @@
 
 Name:    dvbcut
 Version: 0.7.3
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -97,6 +97,9 @@ update-desktop-database &> /dev/null || :
 
 
 %changelog
+* Wed Feb 09 2022 RPM Fusion Release Engineering <sergiomb@rpmfusion.org> - 0.7.3-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_36_Mass_Rebuild
+
 * Sun Dec 19 2021 Sérgio Basto <sergio@serjux.com> - 0.7.3-1
 - Update to 0.7.3
 
