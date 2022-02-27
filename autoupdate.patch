@@ -1,0 +1,58 @@
+Only in dvbcut-0.7.3: autom4te.cache
+diff -upr dvbcut-0.7.3.orig/configure.ac dvbcut-0.7.3/configure.ac
+--- dvbcut-0.7.3.orig/configure.ac	2018-08-20 00:18:53.000000000 +0100
++++ dvbcut-0.7.3/configure.ac	2022-02-27 21:42:37.087154133 +0000
+@@ -4,11 +4,12 @@
+ 
+ #@(#) $Id$
+ 
+-AC_INIT(src/dvbcut.cpp)
++AC_INIT
++AC_CONFIG_SRCDIR([src/dvbcut.cpp])
+ 
+-AC_PREREQ(2.13)
++AC_PREREQ([2.69])
+ 
+-AC_CANONICAL_SYSTEM
++AC_CANONICAL_TARGET
+ 
+ CONFIGURE_ARGS="$ac_configure_args"
+ AC_SUBST(CONFIGURE_ARGS)
+@@ -21,8 +22,18 @@ AC_PROG_INSTALL
+ AC_CHECK_TOOL(STRIP, strip, :)
+ AC_CHECK_TOOL(PKG_CONFIG, pkg-config, :)
+ 
+-AC_CYGWIN
+-AC_MINGW32
++AC_CANONICAL_HOST
++case $host_os in
++  *cygwin* ) CYGWIN=yes;;
++	 * ) CYGWIN=no;;
++esac
++
++AC_CANONICAL_HOST
++case $host_os in
++  *mingw32* ) MINGW32=yes;;
++	  * ) MINGW32=no;;
++esac
++
+ AC_EXEEXT
+ AC_OBJEXT
+ 
+@@ -82,7 +93,6 @@ fi
+ dnl AC_CHECK_LIB(m, sqrt, [LIBS="$LIBS -lm"])
+ 
+ dnl Checks for header files.
+-AC_HEADER_STDC
+ AC_CHECK_HEADERS(ao/ao.h mad.h stdint.h a52dec/a52.h)
+ 
+ dnl Checks for typedefs, structures, and compiler characteristics.
+@@ -141,6 +151,7 @@ AC_DEFINE(__STDC_CONSTANT_MACROS, 1, [Re
+ AC_DEFINE(_FILE_OFFSET_BITS, 64, [We are always using large files])
+ dnl AC_DEFINE(_LARGEFILE_SOURCE)
+ 
+-AC_OUTPUT([Makefile src/Makefile dvbcut.desktop])
++AC_CONFIG_FILES([Makefile src/Makefile dvbcut.desktop])
++AC_OUTPUT
+ 
+ # vi: set ts=8 sw=2 :

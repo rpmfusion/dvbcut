@@ -18,6 +18,7 @@ Patch3:         dvbcut-appicon.patch
 # PATCH-FIX-OPENSUSE dvbcut-locale.patch aloisio@gmx.com -- also install .qm locale files
 Patch4:         dvbcut-locale.patch
 Patch5:         deprecated_QString_sprintf.patch
+Patch6:         autoupdate.patch
 
 BuildRequires: autoconf
 BuildRequires: libtool

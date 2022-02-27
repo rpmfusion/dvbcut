@@ -1,29 +1,29 @@
-Index: dvbcut-deb-0.7.2/configure.ac
-===================================================================
---- dvbcut-deb-0.7.2.orig/configure.ac
-+++ dvbcut-deb-0.7.2/configure.ac
-@@ -43,12 +43,35 @@ done
+diff -upr dvbcut-0.7.3.orig/configure.ac dvbcut-0.7.3/configure.ac
+--- dvbcut-0.7.3.orig/configure.ac	2022-02-27 23:39:19.579651681 +0000
++++ dvbcut-0.7.3/configure.ac	2022-02-27 23:32:11.292333787 +0000
+@@ -54,12 +54,35 @@ done
  
  dnl Checks for libraries.
  
 -FFMPEG_LIBS='-lavformat -lavcodec -lavutil'
  AC_SUBST(FFMPEG_LIBS)
  
-+AC_CHECK_LIB(avformat, main,
+-AC_CHECK_LIB(swscale, main,
+-  [AC_DEFINE(HAVE_LIB_SWSCALE, 1, [Define this if you have libswscale.])
+-  FFMPEG_LIBS="$FFMPEG_LIBS -lswscale"])
++PKG_CHECK_MODULES(avformat, libavformat,
 +  [HAVE_FFMPEG="yes"],
 +  [AC_MSG_ERROR([libavformat library not found])])
 +
-+AC_CHECK_LIB(avcodec, main,
++PKG_CHECK_MODULES(avcodec, libavcodec,
 +  [HAVE_FFMPEG="yes"],
 +  [AC_MSG_ERROR([libavcodec library not found])])
 +
-+AC_CHECK_LIB(avutil, main,
++PKG_CHECK_MODULES(avutil, libavutil,
 +  [HAVE_FFMPEG="yes"],
 +  [AC_MSG_ERROR([libavutil library not found])])
 +
- AC_CHECK_LIB(swscale, main,
--  [AC_DEFINE(HAVE_LIB_SWSCALE, 1, [Define this if you have libswscale.])
--  FFMPEG_LIBS="$FFMPEG_LIBS -lswscale"])
++PKG_CHECK_MODULES(swscale, libavutil,
 +  [HAVE_SWSCALE="yes"],
 +  [AC_MSG_ERROR([libswscale library not found])])
 +
