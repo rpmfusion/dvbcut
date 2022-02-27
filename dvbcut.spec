@@ -17,6 +17,7 @@ Patch1:         dvbcut-use_pkgconfig.patch
 Patch3:         dvbcut-appicon.patch
 # PATCH-FIX-OPENSUSE dvbcut-locale.patch aloisio@gmx.com -- also install .qm locale files
 Patch4:         dvbcut-locale.patch
+Patch5:         deprecated_QString_sprintf.patch
 
 BuildRequires: autoconf
 BuildRequires: libtool
@@ -32,7 +33,11 @@ BuildRequires: pkgconfig(Qt5Widgets)
 BuildRequires: pkgconfig(Qt5Xml)
 BuildRequires: pkgconfig(ao)
 BuildRequires: libmad-devel
+%if 0%{?fedora} && 0%{?fedora} > 35
+BuildRequires: compat-ffmpeg4-devel
+%else
 BuildRequires: ffmpeg-devel
+%endif
 BuildRequires: desktop-file-utils
 Requires: hicolor-icon-theme
 # mplayer not actually required, but much better with it.
@@ -50,13 +55,13 @@ dvbcut can use Mplayer if available.
 
 
 %prep
-%setup -q -n %{name}-deb-%{version}
-%patch1 -p1
-%patch3 -p1
-%patch4 -p1
+%autosetup -p1 -n %{name}-deb-%{version}
 
 
 %build
+%if 0%{?fedora} && 0%{?fedora} > 35
+export PKG_CONFIG_PATH="%{_libdir}/compat-ffmpeg4/pkgconfig"
+%endif
 autoreconf -i
 %configure
 
@@ -97,6 +102,9 @@ update-desktop-database &> /dev/null || :
 
 
 %changelog
+* Sun Feb 27 2022 Sérgio Basto <sergio@serjux.com> - 0.7.3-2
+- Switch to compat-ffmpeg4
+
 * Wed Feb 09 2022 RPM Fusion Release Engineering <sergiomb@rpmfusion.org> - 0.7.3-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_36_Mass_Rebuild
 
