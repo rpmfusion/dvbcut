@@ -1,8 +1,8 @@
 %define svnrev 179
 
 Name:    dvbcut
-Version: 0.7.3
-Release: 2%{?dist}
+Version: 0.7.4
+Release: 1%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -12,18 +12,15 @@ URL:     https://github.com/bernhardu/dvbcut-deb
 #     use sh dvbcut-snapshot.sh to create the archive
 Source0: https://github.com/bernhardu/dvbcut-deb/archive/v%{version}/%{name}-%{version}.tar.gz
 # PATCH-FIX-OPENSUSE dvbcut-use_pkgconfig.patch aloisio@gmx.com -- use pkgconfig for ffmpeg libraries
-Patch1:         dvbcut-use_pkgconfig.patch
+Patch0:         dvbcut-use_pkgconfig.patch
 # PATCH-FIX-OPENSUSE dvbcut-appicon-patch aloisio@gmx.com -- install icon in the proper path
-Patch3:         dvbcut-appicon.patch
+Patch1:         dvbcut-appicon.patch
 # PATCH-FIX-OPENSUSE dvbcut-locale.patch aloisio@gmx.com -- also install .qm locale files
-Patch4:         dvbcut-locale.patch
-Patch5:         deprecated_QString_sprintf.patch
-Patch6:         autoupdate.patch
+Patch2:         dvbcut-locale.patch
 
 BuildRequires: autoconf
 BuildRequires: libtool
 BuildRequires: gcc-c++
-BuildRequires: libao-devel
 BuildRequires: a52dec-devel
 BuildRequires: hicolor-icon-theme
 BuildRequires: qt5-linguist
@@ -34,15 +31,12 @@ BuildRequires: pkgconfig(Qt5Widgets)
 BuildRequires: pkgconfig(Qt5Xml)
 BuildRequires: pkgconfig(ao)
 BuildRequires: libmad-devel
-%if 0%{?fedora} && 0%{?fedora} > 35
-BuildRequires: compat-ffmpeg4-devel
-%else
 BuildRequires: ffmpeg-devel
-%endif
 BuildRequires: desktop-file-utils
-Requires: hicolor-icon-theme
+
+Requires:      hicolor-icon-theme
 # mplayer not actually required, but much better with it.
-Requires: mplayer
+Recommends:    mplayer
 
 
 %description
@@ -60,9 +54,6 @@ dvbcut can use Mplayer if available.
 
 
 %build
-%if 0%{?fedora} && 0%{?fedora} > 35
-export PKG_CONFIG_PATH="%{_libdir}/compat-ffmpeg4/pkgconfig"
-%endif
 autoreconf -i
 %configure
 
@@ -72,37 +63,26 @@ autoreconf -i
 %install
 %make_install
 
-
-%post
-touch --no-create %{_datadir}/icons/hicolor || :
-if [ -x %{_bindir}/gtk-update-icon-cache ]; then
-  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
-fi
-
-update-desktop-database &> /dev/null || :
-
-
-%postun
-touch --no-create %{_datadir}/icons/hicolor || :
-if [ -x %{_bindir}/gtk-update-icon-cache ]; then
-  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
-fi
-
-update-desktop-database &> /dev/null || :
-
+desktop-file-install                                  \
+  --delete-original                                   \
+  --dir %{buildroot}/%{_datadir}/applications/        \
+  %{buildroot}/%{_datadir}/applications/*.desktop
 
 %files
 %doc ChangeLog CREDITS README README.icons
 %license COPYING
 %{_bindir}/%{name}
-%{_mandir}/man1/%{name}.1.gz
+%{_mandir}/man1/%{name}.1.*
 %{_datadir}/applications/*.desktop
 %{_datadir}/icons/hicolor/scalable/apps/%{name}.svg
-%{_datadir}/%{name}
+%{_datadir}/%{name}/
 %{_datadir}/mime/packages/dvbcut.xml
 
 
 %changelog
+* Thu Jul 14 2022 Leigh Scott <leigh123linux@gmail.com> - 0.7.4-1
+- Update to 0.7.4
+
 * Sun Feb 27 2022 Sérgio Basto <sergio@serjux.com> - 0.7.3-2
 - Switch to compat-ffmpeg4
 
