@@ -51,14 +51,12 @@ dvbcut can use Mplayer if available.
 
 %prep
 %autosetup -p1 -n %{name}-deb-%{version}
-
+rm config.guess config.sub install-sh
+autoreconf -fiv
 
 %build
-autoreconf -i
 %configure
-
 %make_build
-
 
 %install
 %make_install
