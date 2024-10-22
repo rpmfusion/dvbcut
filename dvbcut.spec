@@ -31,7 +31,12 @@ BuildRequires: pkgconfig(Qt5Widgets)
 BuildRequires: pkgconfig(Qt5Xml)
 BuildRequires: pkgconfig(ao)
 BuildRequires: libmad-devel
+# No support for FFmpeg7 yet
+%if 0%{?fedora} > 40 || 0%{?rhel} > 9
+BuildRequires: compat-ffmpeg4-devel
+%else
 BuildRequires: ffmpeg-devel
+%endif
 BuildRequires: desktop-file-utils
 
 Requires:      hicolor-icon-theme
