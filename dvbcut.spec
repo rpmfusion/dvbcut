@@ -2,7 +2,7 @@
 
 Name:    dvbcut
 Version: 0.7.4
-Release: 7%{?dist}
+Release: 8%{?dist}
 Summary: Clip and convert DVB transport streams to MPEG2 program streams
 
 Group:   Applications/Multimedia
@@ -83,6 +83,9 @@ desktop-file-install                                  \
 
 
 %changelog
+* Tue Oct 22 2024 Nicolas Chauvet <kwizart@gmail.com> - 0.7.4-8
+- Switch to compat-ffmpeg4-devel
+
 * Tue Oct 22 2024 Nicolas Chauvet <kwizart@gmail.com> - 0.7.4-7
 - rebuilt
 
